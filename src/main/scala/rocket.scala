@@ -59,22 +59,22 @@ class Rocket32BaseConfig extends Config(
 /* Small core with 1KiB cache  */
 class Rocket32s1_extrasmallcache extends Config(
   new WithNBreakpoints(8) ++
-  new WithNSmallCores(1)  ++
   new WithL1ICacheSets(16) ++
   new WithL1ICacheWays(1) ++
   new WithL1DCacheSets(16) ++
   new WithL1DCacheWays(1) ++
+  new WithNSmallCores(1)  ++
   new WithRV32            ++
   new Rocket32BaseConfig)
 
 /* Small core with 2KiB cache  */
 class Rocket32s1_smallcache extends Config(
   new WithNBreakpoints(8) ++
-  new WithNSmallCores(1)  ++
   new WithL1ICacheSets(32) ++
   new WithL1ICacheWays(1) ++
   new WithL1DCacheSets(32) ++
   new WithL1DCacheWays(1) ++
+  new WithNSmallCores(1)  ++
   new WithRV32            ++
   new Rocket32BaseConfig)
 
@@ -88,22 +88,22 @@ class Rocket32s1 extends Config(
 /* Small core with 8KiB cache  */
 class Rocket32s1_bigcache extends Config(
   new WithNBreakpoints(8) ++
-  new WithNSmallCores(1)  ++
   new WithL1ICacheSets(128) ++
   new WithL1ICacheWays(2) ++
   new WithL1DCacheSets(128) ++
   new WithL1DCacheWays(2) ++
+  new WithNSmallCores(1)  ++
   new WithRV32            ++
   new Rocket32BaseConfig)
 
 /* Small core with 16KiB cache  */
 class Rocket32s1_extrabigcache extends Config(
   new WithNBreakpoints(8) ++
-  new WithNSmallCores(1)  ++
   new WithL1ICacheSets(256) ++
   new WithL1ICacheWays(4) ++
   new WithL1DCacheSets(256) ++
   new WithL1DCacheWays(4) ++
+  new WithNSmallCores(1)  ++
   new WithRV32            ++
   new Rocket32BaseConfig)
 
