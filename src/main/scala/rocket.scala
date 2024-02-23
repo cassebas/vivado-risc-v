@@ -302,6 +302,65 @@ class rv32_i16k_d16k extends Config(
   new WithRV32            ++
   new Rocket32BaseConfig)
 
+/*
+ rv32_i8k_d512b : small RV 32-bit core with
+  - 8KiB i-cache 2-way associative
+  - 512B d-cache direct mapped
+ */
+class rv32_i8k_d512b extends Config(
+  new WithNBreakpoints(8) ++
+  new WithL1ICacheSets(64) ++
+  new WithL1ICacheWays(2) ++
+  new WithL1DCacheSets(8) ++
+  new WithL1DCacheWays(1) ++
+  new WithNSmallCores(1)  ++
+  new WithRV32            ++
+  new Rocket32BaseConfig)
+
+/*
+ rv32_i512b_d8k : small RV 32-bit core with
+  - 512B i-cache direct mapped
+  - 8KiB d-cache 2-way associative
+ */
+class rv32_i512b_d8k extends Config(
+  new WithNBreakpoints(8) ++
+  new WithL1ICacheSets(8) ++
+  new WithL1ICacheWays(1) ++
+  new WithL1DCacheSets(64) ++
+  new WithL1DCacheWays(2) ++
+  new WithNSmallCores(1)  ++
+  new WithRV32            ++
+  new Rocket32BaseConfig)
+
+/*
+ rv32_i16k_d256b : small RV 32-bit core with
+  - 16KiB i-cache 4-way associative
+  - 256B d-cache direct mapped
+ */
+class rv32_i16k_d256b extends Config(
+  new WithNBreakpoints(8) ++
+  new WithL1ICacheSets(64) ++
+  new WithL1ICacheWays(4) ++
+  new WithL1DCacheSets(4) ++
+  new WithL1DCacheWays(1) ++
+  new WithNSmallCores(1)  ++
+  new WithRV32            ++
+  new Rocket32BaseConfig)
+
+/*
+ rv32_i256b_d16k : small RV 32-bit core with
+  - 256B i-cache direct mapped
+  - 16KiB d-cache 4-way associative
+ */
+class rv32_i256b_d16k extends Config(
+  new WithNBreakpoints(8) ++
+  new WithL1ICacheSets(4) ++
+  new WithL1ICacheWays(1) ++
+  new WithL1DCacheSets(64) ++
+  new WithL1DCacheWays(4) ++
+  new WithNSmallCores(1)  ++
+  new WithRV32            ++
+  new Rocket32BaseConfig)
 
 
 /* Small core with standard direct mapped 4KiB caches  */
