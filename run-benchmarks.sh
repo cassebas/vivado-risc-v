@@ -8,6 +8,9 @@ VIVADO_VERSION=2022.2
 VIVADO_HOME=/opt/xilinx/Vivado/${VIVADO_VERSION}
 source ${VIVADO_HOME}/settings64.sh
 
+TACLE_BENCH_DIR="../tacle-bench"
+TACLE_BENCH_SEQ_DIR="$TACLE_BENCH_DIR/bench/sequential"
+
 # Configure the benchmark minimal running times per benchmark,
 # this is to make sure that each benchmark gets enough time to
 # finish its execution (twice).
@@ -64,6 +67,15 @@ function run_benchmarks () {
                  statemate \
                  susan
     do
+        # First compile the benchmark with an extra defined
+        # macro that configures the correct riscv core config.
+        # This core config will be printed to the termianl to
+        # aid processing the output data.
+        cd "$TACLE_BENCH_SEQ_DIR/$BENCH" \
+            && make clean \
+            && BENCHMARK_CONFIG=$BENCHMARK_CONFIG make \
+            && cd -
+        # Now connect to the riscv core and run the benchmark!
         xsdb ./run-single-benchmark.tcl $BENCH ${BENCHMARK_MIN_RUNTIME[$BENCH]}
     done
 }
