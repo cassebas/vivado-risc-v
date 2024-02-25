@@ -381,6 +381,6 @@ BITSTREAM      = workspace/$(BENCHMARK)/$(BITSTREAM_DIR)/$(BITSTREAM_FILE)
 .PHONY: program_device
 program_device:
 	@echo "Programming configuration "$(BENCHMARK_CONFIG)" into the FPGA "$(HW_DEVICE)
-	# env BITSTREAM=$(BITSTREAM) HW_DEVICE=$(HW_DEVICE) \
-	# 	$(vivado) -source program_device.tcl
-	# @echo "Done"
+	env BITSTREAM=$(BITSTREAM) HW_DEVICE=$(HW_DEVICE) \
+	 	$(vivado) -source program_device.tcl
+	@echo "Done"
