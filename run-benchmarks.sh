@@ -75,8 +75,9 @@ function run_benchmarks () {
             && make clean \
             && BENCHMARK_CONFIG=$BENCHMARK_CONFIG make \
             && cd -
+        BENCHMARK_ELF="$TACLE_BENCH_SEQ_DIR/$BENCH/buildfiles/${BENCH}.elf"
         # Now connect to the riscv core and run the benchmark!
-        xsdb ./run-single-benchmark.tcl $BENCH ${BENCHMARK_MIN_RUNTIME[$BENCH]}
+        xsdb ./run-single-benchmark.tcl $BENCHMARK_ELF ${BENCHMARK_MIN_RUNTIME[$BENCH]}
     done
 }
 
