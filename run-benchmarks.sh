@@ -19,7 +19,7 @@ TACLE_BENCH_SEQ_DIR="$TACLE_BENCH_DIR/bench/sequential"
 declare -A BENCHMARK_MIN_RUNTIME
 BENCHMARK_MIN_RUNTIME[adpcm_dec]=1
 BENCHMARK_MIN_RUNTIME[adpcm_enc]=1
-BENCHMARK_MIN_RUNTIME[ammunition]=100
+BENCHMARK_MIN_RUNTIME[ammunition]=120
 BENCHMARK_MIN_RUNTIME[anagram]=2
 BENCHMARK_MIN_RUNTIME[audiobeam]=3
 BENCHMARK_MIN_RUNTIME[cjpeg_transupp]=2
@@ -39,7 +39,7 @@ BENCHMARK_MIN_RUNTIME[petrinet]=1
 BENCHMARK_MIN_RUNTIME[rijndael_dec]=10
 BENCHMARK_MIN_RUNTIME[rijndael_enc]=10
 BENCHMARK_MIN_RUNTIME[statemate]=1
-BENCHMARK_MIN_RUNTIME[susan]=40
+BENCHMARK_MIN_RUNTIME[susan]=25
 
 # Run all bencmarks in alphabetical order.
 function run_benchmarks () {
