@@ -10,3 +10,6 @@
 /project/project/target/
 /generators/targetutils/target/
 /bare-metal/hello-world/boot.elf
+.python-version
+make-rv32-generated.sh
+src/main/scala/rocket_generated_cacheconfigs.scala
