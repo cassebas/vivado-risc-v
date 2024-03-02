@@ -373,10 +373,10 @@ vivado-gui: $(proj_time)
 
 
 HW_DEVICE ?= xc7k325t_0
-BENCHMARK_CONFIG = rv32_i4k_d4k
+BENCHMARK_CONFIG ?= rv32_i4k_d4k
 BITSTREAM_DIR    = vivado-genesys2-riscv/genesys2-riscv.runs/impl_1
 BITSTREAM_FILE   = riscv_wrapper.bit
-BITSTREAM        = workspace/$(BENCHMARK_CONFIG)/$(BITSTREAM_DIR)/$(BITSTREAM_FILE)
+BITSTREAM        ?= workspace/$(BENCHMARK_CONFIG)/$(BITSTREAM_DIR)/$(BITSTREAM_FILE)
 
 .PHONY: program_device
 program_device:
