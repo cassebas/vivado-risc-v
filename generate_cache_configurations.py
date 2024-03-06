@@ -23,7 +23,7 @@ import freechips.rocketchip.util.DontTouch
 import freechips.rocketchip.system._
 """
 
-sh_header = """#!/bin/sh
+sh_make_cc_header = """#!/bin/sh
 
 ##########################################
 # THIS IS A GENERATED FILE, DO NOT EDIT! #
@@ -36,9 +36,10 @@ source ${VIVADO_HOME}/settings64.sh
 
 # Now make the bitstreams in batch mode"""
 
+sh_run_cc_header = """for CONFIG in \\"""
+
 cache_configurations = {
     # name : (sets, ways)
-    "64b"  : (1, 1),
     "128b" : (2, 1),
     "256b" : (4, 1),
     "512b" : (8, 1),
@@ -54,7 +55,16 @@ cache_configurations = {
 def output_header(header):
     print(header)
 
-def generate_cache_configurations():
+def generate_cache_configuration_shell():
+    for icache_conf in cache_configurations.keys():
+        for dcache_conf in cache_configurations.keys():
+            (i_cache_sets, i_cache_ways) = cache_configurations[icache_conf]
+            (d_cache_sets, d_cache_ways) = cache_configurations[dcache_conf]
+            cache_conf_str = "rv32_i{}_d{}".format(icache_conf, dcache_conf)
+            print("\t{} \\".format(cache_conf_str))
+
+
+def generate_cache_configurations_scala():
     for icache_conf in cache_configurations.keys():
         for dcache_conf in cache_configurations.keys():
             (i_cache_sets, i_cache_ways) = cache_configurations[icache_conf]
@@ -95,20 +105,24 @@ def generate_make_bitstream_commands():
 @click.command()
 @click.option('--output-mode',
               required=True,
-              help='Mode of the output, either scala or sh.')
+              help='Mode of the output, either scala, sh_make_cc or sh_run_cc.')
 @click_log.simple_verbosity_option(logger)
 def main(output_mode):
-    if not (output_mode == "scala" or output_mode == "sh"):
+    if not (output_mode == "scala" or output_mode == "sh_make_cc" or output_mode == "sh_run_cc"):
         logger.error("Output mode must be either '{}' or '{}'".format("scala",
-                                                                      "sh"))
+                                                                      "sh_make_cc"
+                                                                      "sh_run_cc"))
         logger.info('Exiting program due to error.')
         exit(1)
 
     if output_mode == "scala":
         output_header(scala_header)
-        generate_cache_configurations()
+        generate_cache_configurations_scala()
+    elif output_mode == "sh_run_cc":
+        output_header(sh_run_cc_header)
+        generate_cache_configuration_shell()
     else:
-        output_header(sh_header)
+        output_header(sh_make_cc_header)
         generate_make_bitstream_commands()
 
 

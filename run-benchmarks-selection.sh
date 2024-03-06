@@ -55,7 +55,57 @@ export HW_DEVICE=xc7k325t_0
 BITSTREAM_DIR=vivado-genesys2-riscv/genesys2-riscv.runs/impl_1
 BITSTREAM_FILE=riscv_wrapper.bit
 
-for CONFIG in rv32_i4k_d128b \
+for CONFIG in rv32_i128b_d128b \
+              rv32_i128b_d256b \
+              rv32_i128b_d512b \
+              rv32_i128b_d1k \
+              rv32_i128b_d2k \
+              rv32_i128b_d4k \
+              rv32_i128b_d8k \
+              rv32_i128b_d16k \
+              rv32_i128b_d32k \
+              rv32_i128b_d64k \
+              rv32_i256b_d128b \
+              rv32_i256b_d256b \
+              rv32_i256b_d512b \
+              rv32_i256b_d1k \
+              rv32_i256b_d2k \
+              rv32_i256b_d4k \
+              rv32_i256b_d8k \
+              rv32_i256b_d16k \
+              rv32_i256b_d32k \
+              rv32_i256b_d64k \
+              rv32_i512b_d128b \
+              rv32_i512b_d256b \
+              rv32_i512b_d512b \
+              rv32_i512b_d1k \
+              rv32_i512b_d2k \
+              rv32_i512b_d4k \
+              rv32_i512b_d8k \
+              rv32_i512b_d16k \
+              rv32_i512b_d32k \
+              rv32_i512b_d64k \
+              rv32_i1k_d128b \
+              rv32_i1k_d256b \
+              rv32_i1k_d512b \
+              rv32_i1k_d1k \
+              rv32_i1k_d2k \
+              rv32_i1k_d4k \
+              rv32_i1k_d8k \
+              rv32_i1k_d16k \
+              rv32_i1k_d32k \
+              rv32_i1k_d64k \
+              rv32_i2k_d128b \
+              rv32_i2k_d256b \
+              rv32_i2k_d512b \
+              rv32_i2k_d1k \
+              rv32_i2k_d2k \
+              rv32_i2k_d4k \
+              rv32_i2k_d8k \
+              rv32_i2k_d16k \
+              rv32_i2k_d32k \
+              rv32_i2k_d64k \
+              rv32_i4k_d128b \
               rv32_i4k_d256b \
               rv32_i4k_d512b \
               rv32_i4k_d1k \
@@ -64,7 +114,47 @@ for CONFIG in rv32_i4k_d128b \
               rv32_i4k_d8k \
               rv32_i4k_d16k \
               rv32_i4k_d32k \
-              rv32_i4k_d64k
+              rv32_i4k_d64k \
+              rv32_i8k_d128b \
+              rv32_i8k_d256b \
+              rv32_i8k_d512b \
+              rv32_i8k_d1k \
+              rv32_i8k_d2k \
+              rv32_i8k_d4k \
+              rv32_i8k_d8k \
+              rv32_i8k_d16k \
+              rv32_i8k_d32k \
+              rv32_i8k_d64k \
+              rv32_i16k_d128b \
+              rv32_i16k_d256b \
+              rv32_i16k_d512b \
+              rv32_i16k_d1k \
+              rv32_i16k_d2k \
+              rv32_i16k_d4k \
+              rv32_i16k_d8k \
+              rv32_i16k_d16k \
+              rv32_i16k_d32k \
+              rv32_i16k_d64k \
+              rv32_i32k_d128b \
+              rv32_i32k_d256b \
+              rv32_i32k_d512b \
+              rv32_i32k_d1k \
+              rv32_i32k_d2k \
+              rv32_i32k_d4k \
+              rv32_i32k_d8k \
+              rv32_i32k_d16k \
+              rv32_i32k_d32k \
+              rv32_i32k_d64k \
+              rv32_i64k_d128b \
+              rv32_i64k_d256b \
+              rv32_i64k_d512b \
+              rv32_i64k_d1k \
+              rv32_i64k_d2k \
+              rv32_i64k_d4k \
+              rv32_i64k_d8k \
+              rv32_i64k_d16k \
+              rv32_i64k_d32k \
+              rv32_i64k_d64k
 do
     export BENCHMARK_CONFIG=$CONFIG
     export BITSTREAM=workspace/${BENCHMARK_CONFIG}/${BITSTREAM_DIR}/${BITSTREAM_FILE}
