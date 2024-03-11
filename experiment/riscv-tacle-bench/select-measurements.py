@@ -25,7 +25,7 @@ cache_configurations = {
 def select_measurements(input_dir, output_dir):
     # Get all input files in the current directory
     inputfiles = sorted(glob.glob(join(input_dir,
-                                       "rv32-taclebench-*.csv")))
+                                       "rv32-complete-*.csv")))
 
     for inputfile in inputfiles:
         logger.info("Reading input file {}".format(inputfile))
@@ -42,7 +42,7 @@ def select_measurements(input_dir, output_dir):
         for icache_conf in cache_configurations.keys():
             cache_configs = []
             for dcache_conf in cache_configurations.keys():
-                this_cc = "i{}-d{}".format(icache_conf, dcache_conf)
+                this_cc = "i{}_d{}".format(icache_conf, dcache_conf)
                 (ics, icw, icb) = cache_configurations[icache_conf]
                 (dcs, dcw, dcb) = cache_configurations[dcache_conf]
                 df.loc[df.cache_config == this_cc, "icache_size"] = icb
@@ -73,7 +73,7 @@ def select_measurements(input_dir, output_dir):
             else:
                 # This is a filtered dataframe, output to CSV
                 outputfile = join(output_dir,
-                                "rv32-taclebench-{}-1-i{}.csv".format(bm,
+                                "rv32-experiment-{}-1-i{}.csv".format(bm,
                                                                       icache_conf))
                 logger.info("Writing to this output file: {}".format(outputfile))
                 expdf.to_csv(outputfile, index=False, sep=",")
@@ -82,7 +82,7 @@ def select_measurements(input_dir, output_dir):
         for dcache_conf in cache_configurations.keys():
             cache_configs = []
             for icache_conf in cache_configurations.keys():
-                this_cc = "i{}-d{}".format(icache_conf, dcache_conf)
+                this_cc = "i{}_d{}".format(icache_conf, dcache_conf)
                 (ics, icw, icb) = cache_configurations[icache_conf]
                 (dcs, dcw, dcb) = cache_configurations[dcache_conf]
                 df.loc[df.cache_config == this_cc, "icache_size"] = icb
@@ -113,7 +113,7 @@ def select_measurements(input_dir, output_dir):
             else:
                 # This is a filtered dataframe, output to CSV
                 outputfile = join(output_dir,
-                                "rv32-taclebench-{}-2-d{}.csv".format(bm,
+                                "rv32-experiment-{}-2-d{}.csv".format(bm,
                                                                       dcache_conf))
                 logger.info("Writing to this output file: {}".format(outputfile))
                 expdf.to_csv(outputfile, index=False, sep=",")
@@ -121,7 +121,7 @@ def select_measurements(input_dir, output_dir):
         # Third experiment, both i-cache size and d-cache size grow
         cache_configs = []
         for cache_conf in cache_configurations.keys():
-            this_cc = "i{}-d{}".format(cache_conf, cache_conf)
+            this_cc = "i{}_d{}".format(cache_conf, cache_conf)
             (ics, icw, icb) = cache_configurations[cache_conf]
             (dcs, dcw, dcb) = cache_configurations[cache_conf]
             df.loc[df.cache_config == this_cc, "icache_size"] = icb
@@ -152,7 +152,7 @@ def select_measurements(input_dir, output_dir):
         else:
             # This is a filtered dataframe, output to CSV
             outputfile = join(output_dir,
-                              "rv32-taclebench-{}-3.csv".format(bm))
+                              "rv32-experiment-{}-3.csv".format(bm))
             logger.info("Writing to this output file: {}".format(outputfile))
             expdf.to_csv(outputfile, index=False, sep=",")
 

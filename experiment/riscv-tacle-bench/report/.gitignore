@@ -1,0 +1,8 @@
+auto
+data
+*.pdf
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+figures-experiment?.tex

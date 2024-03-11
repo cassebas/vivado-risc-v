@@ -29,9 +29,10 @@ def split_benchmarks(input_dir, output_dir):
         # fdf is a filtered dataframe with only one benchmark
         fdf = dfs[dfs['benchmark']==bm].copy()
 
-        # LaTeX doesn't handle underscore well, replace by dashes
-        fdf.loc[:,'cache_config'] = fdf['cache_config'].str.replace('_','-')
-        fdf.loc[:,'benchmark'] = fdf['benchmark'].str.replace('_','-')
+        # For now keep underscores and fix them later on with m4
+        # # LaTeX doesn't handle underscore well, replace by dashes
+        # fdf.loc[:,'cache_config'] = fdf['cache_config'].str.replace('_','-')
+        # fdf.loc[:,'benchmark'] = fdf['benchmark'].str.replace('_','-')
 
         # Make an extra architecture column in the dataframe, with a default
         # value to make sure there will be no empty cells later on
@@ -42,11 +43,11 @@ def split_benchmarks(input_dir, output_dir):
         fdf.loc[fdf.cache_config.str.contains("rv32"), 'architecture'] = "rv32"
 
         # Now remove the architecture part of the cache_config column
-        fdf.loc[:,'cache_config'] = fdf['cache_config'].str.replace('rv32-','')
+        fdf.loc[:,'cache_config'] = fdf['cache_config'].str.replace('rv32_','')
 
         # Create CSV output file
         outputfile = join(output_dir,
-                          "rv32-taclebench-{}.csv".format(bm))
+                          "rv32-complete-{}.csv".format(bm))
         logger.info("Writing to this output file: {}".format(outputfile))
         fdf.to_csv(outputfile, index=False, sep=',')
 

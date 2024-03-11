@@ -19,15 +19,27 @@ define(`_forloop',
 dnl
 define(escape_adpcm_dec,      adpcm\_dec)dnl
 define(escape_adpcm_enc,      adpcm\_enc)dnl
+define(escape_ammunition,     ammunition)dnl
+define(escape_anagram,        anagram)dnl
+define(escape_audiobeam,      audiobeam)dnl
 define(escape_cjpeg_transupp, cjpeg\_transupp)dnl
+define(escape_cjpeg_wrbmp,    cjpeg\_wrbmp)dnl
+define(escape_dijkstra,       dijkstra)dnl
+define(escape_epic,           epic)dnl
+define(escape_fmref,          fmref)dnl
 define(escape_g723_enc,       g723\_enc)dnl
 define(escape_gsm_dec,        gsm\_dec)dnl
 define(escape_gsm_enc,        gsm\_enc)dnl
 define(escape_h264_dec,       h264\_dec)dnl
 define(escape_huff_dec,       huff\_dec)dnl
 define(escape_huff_enc,       huff\_enc)dnl
+define(escape_mpeg2,          mpeg2)dnl
+define(escape_ndes,           ndes)dnl
+define(escape_petrinet,       petrinet)dnl
 define(escape_rijndael_dec,   rijndael\_dec)dnl
 define(escape_rijndael_enc,   rijndael\_enc)dnl
+define(escape_statemate,      statemate)dnl
+define(escape_susan,          susan)dnl
 dnl
 define(escape_benchmark_name, `escape_$1')dnl
 dnl cache sizes
@@ -79,7 +91,7 @@ define(macro_special_loop, `forloop(`i', `$1', `$2', `$3($4(i),i)')')
 dnl
 dnl
 dnl % template_title
-define(template_title, `title{\texttt{escape_benchmark_name(benchmark)} (lookup_fixed_cache(exp_nr)-cache lookup_cachesize(1)---lookup_cachesize(10)),')dnl
+define(template_title, `title={\texttt{escape_benchmark_name(benchmark)} (lookup_fixed_cache(exp_nr)-cache lookup_cachesize(1)---lookup_cachesize(10))},')dnl
 dnl
 dnl
 dnl % template_xlabel
@@ -93,7 +105,7 @@ define(template_addplot, `
       table [
         x expr = \coordindex,
         y expr = \thisrow{cycles_cold_cache},
-      ] {data/rv32-taclebench-benchmark-`'exp_nr`'-`'lookup_fixed_cache(exp_nr)`'lookup_cachesize($1)`'.csv};
+      ] {data/rv32-experiment-benchmark-`'exp_nr`'-`'lookup_fixed_cache(exp_nr)`'lookup_cachesize($1)`'.csv};
       \addlegendentry{{\scriptsize lookup_fixed_cache(exp_nr)-cache lookup_cachesize($1)}}
 ')
 dnl
@@ -110,7 +122,7 @@ define(template_figure, `dnl
         table/col sep=comma,
         xlabel={template_xlabel},
         ylabel={number of cycles},
-        flexible xticklabels from table={data/rv32-taclebench-benchmark-exp_nr-lookup_fixed_cache(exp_nr)`'$1`'.csv}{dcache_size}{col sep=comma},
+        flexible xticklabels from table={data/rv32-experiment-benchmark-exp_nr-lookup_fixed_cache(exp_nr)`'$1`'.csv}{dcache_size}{col sep=comma},
         xtick=data,
         x tick label style={rotate=45, anchor=north east, inner sep=0mm},
         enlarge x limits=0.1,
