@@ -126,7 +126,7 @@ define(template_figure, `dnl
         xtick=data,
         x tick label style={rotate=45, anchor=north east, inner sep=0mm},
         enlarge x limits=0.1,
-        legend style={at={(1.48,0.70)},anchor=south east},
+        legend style={at={(1.48,0.33)},anchor=south east},
       ]
 dnl Call the macro_loop for generating addplot templates,
 dnl for each instruction cache size one template addplot is generated.
