@@ -80,7 +80,6 @@ $(TEX_EXP3): $(CSV_EXP3)
 	   cycles2pgfplots.m4 > $@
 
 $(TEX_EXP1_FIGURES): $(TEX_EXP1)
-	@echo "first dep is $<"
 	@echo $^ | \
 		tr " " "\n" | \
 		sed 's/^report\///' | \
