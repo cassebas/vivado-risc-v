@@ -122,7 +122,7 @@ define(template_figure, `dnl
         table/col sep=comma,
         xlabel={template_xlabel},
         ylabel={number of cycles},
-        flexible xticklabels from table={data/rv32-experiment-benchmark-exp_nr-lookup_fixed_cache(exp_nr)`'$1`'.csv}{dcache_size}{col sep=comma},
+        flexible xticklabels from table={data/rv32-experiment-benchmark-exp_nr-lookup_fixed_cache(exp_nr)`'$1`'.csv}{lookup_variable_cache(exp_nr)`'cache_size}{col sep=comma},
         xtick=data,
         x tick label style={rotate=45, anchor=north east, inner sep=0mm},
         enlarge x limits=0.1,
