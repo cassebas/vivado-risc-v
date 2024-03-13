@@ -5,4 +5,4 @@ data
 *.fdb_latexmk
 *.fls
 *.log
-figures-experiment?.tex
+figures-experiment*.tex
