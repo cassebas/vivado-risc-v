@@ -91,7 +91,7 @@ define(macro_special_loop, `forloop(`i', `$1', `$2', `$3($4(i),i)')')
 dnl
 dnl
 dnl % template_title
-define(template_title, `title={\texttt{escape_benchmark_name(benchmark)} (lookup_fixed_cache(exp_nr)-cache lookup_cachesize(1)---lookup_cachesize(10))},')dnl
+define(template_title, `title={\texttt{escape_benchmark_name(benchmark)} (lookup_fixed_cache(exp_nr)-cache cachesize)},')dnl
 dnl
 dnl
 dnl % template_xlabel
@@ -133,13 +133,13 @@ define(template_figure, `dnl
         x expr = \coordindex,
         y expr = \thisrow{cycles_cold_cache},
       ] {data/rv32-experiment-benchmark-`'exp_nr`'-`'lookup_fixed_cache(exp_nr)`'$1`'.csv};
-      \addlegendentry{{\scriptsize cold lookup_fixed_cache(exp_nr)-cache $1}}
+      \addlegendentry{{\scriptsize cold cache}}
       \addplot+[]
       table [
         x expr = \coordindex,
         y expr = \thisrow{cycles_warm_cache},
       ] {data/rv32-experiment-benchmark-`'exp_nr`'-`'lookup_fixed_cache(exp_nr)`'$1`'.csv};
-      \addlegendentry{{\scriptsize warm lookup_fixed_cache(exp_nr)-cache $1}}
+      \addlegendentry{{\scriptsize warm cache}}
     \end{axis}
   \end{tikzpicture}
   \caption{Benchmarks running on $2 cores configuration config `label' label}
