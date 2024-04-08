@@ -17,25 +17,34 @@ TACLE_BENCH_SEQ_DIR="$TACLE_BENCH_DIR/bench/sequential"
 # This is configured per benchmark, in order to avoid unnecessary
 # delays for small benchmarks.
 declare -A BENCHMARK_MIN_RUNTIME
-BENCHMARK_MIN_RUNTIME[ammunition]=130
+BENCHMARK_MIN_RUNTIME[adpcm_dec]=1
+BENCHMARK_MIN_RUNTIME[adpcm_enc]=1
+BENCHMARK_MIN_RUNTIME[ammunition]=120
 BENCHMARK_MIN_RUNTIME[anagram]=2
 BENCHMARK_MIN_RUNTIME[audiobeam]=3
-BENCHMARK_MIN_RUNTIME[cjpeg_transupp]=3
+BENCHMARK_MIN_RUNTIME[cjpeg_transupp]=2
 BENCHMARK_MIN_RUNTIME[cjpeg_wrbmp]=1
-BENCHMARK_MIN_RUNTIME[fmref]=6
+BENCHMARK_MIN_RUNTIME[dijkstra]=15
+BENCHMARK_MIN_RUNTIME[epic]=15
+BENCHMARK_MIN_RUNTIME[fmref]=5
+BENCHMARK_MIN_RUNTIME[g723_enc]=1
 BENCHMARK_MIN_RUNTIME[gsm_dec]=2
-BENCHMARK_MIN_RUNTIME[gsm_enc]=4
+BENCHMARK_MIN_RUNTIME[gsm_enc]=5
+BENCHMARK_MIN_RUNTIME[h264_dec]=1
+BENCHMARK_MIN_RUNTIME[huff_dec]=1
+BENCHMARK_MIN_RUNTIME[huff_enc]=2
+BENCHMARK_MIN_RUNTIME[mpeg2]=60
+BENCHMARK_MIN_RUNTIME[ndes]=1
+BENCHMARK_MIN_RUNTIME[petrinet]=1
+BENCHMARK_MIN_RUNTIME[rijndael_dec]=10
+BENCHMARK_MIN_RUNTIME[rijndael_enc]=10
+BENCHMARK_MIN_RUNTIME[statemate]=1
+BENCHMARK_MIN_RUNTIME[susan]=25
+
 
 # Run all bencmarks in alphabetical order.
 function run_benchmarks () {
-    for BENCH in ammunition \
-                 anagram \
-                 audiobeam \
-                 cjpeg_transupp \
-                 cjpeg_wrbmp \
-                 fmref \
-                 gsm_dec \
-                 gsm_enc
+    for BENCH in adpcm_dec
     do
         # First compile the benchmark with an extra defined
         # macro that configures the correct riscv core config.
@@ -47,7 +56,8 @@ function run_benchmarks () {
             && cd -
         BENCHMARK_ELF="$TACLE_BENCH_SEQ_DIR/$BENCH/buildfiles/${BENCH}.elf"
         # Now connect to the riscv core and run the benchmark!
-        xsdb ./run-single-benchmark.tcl $BENCHMARK_ELF ${BENCHMARK_MIN_RUNTIME[$BENCH]}
+	#   .. allow extra time for synthetic benchmark to complete (hence +10)
+	xsdb ./run-single-benchmark.tcl $BENCHMARK_ELF $((${BENCHMARK_MIN_RUNTIME[$BENCH]} + 10))
     done
 }
 
