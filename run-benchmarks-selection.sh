@@ -49,7 +49,6 @@ function run_benchmarks () {
                  cjpeg_wrbmp \
                  g723_enc \
                  h264_dec \
-                 huff_dec \
                  ndes \
                  petrinet \
                  statemate
