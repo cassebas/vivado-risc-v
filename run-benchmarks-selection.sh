@@ -44,7 +44,15 @@ BENCHMARK_MIN_RUNTIME[susan]=25
 
 # Run all bencmarks in alphabetical order.
 function run_benchmarks () {
-    for BENCH in adpcm_dec
+    for BENCH in adpcm_dec \
+                 adpcm_enc \
+                 cjpeg_wrbmp \
+                 g723_enc \
+                 h264_dec \
+                 huff_dec \
+                 ndes \
+                 petrinet \
+                 statemate
     do
         # First compile the benchmark with an extra defined
         # macro that configures the correct riscv core config.
