@@ -53,19 +53,23 @@ def select_measurements(input_dir, output_dir):
             mask = df['cache_config'].isin(cache_configs)
             expdf = df[mask]
 
+            # Delete the rows that have a non-zero writeattack column,
+            # they are from another experiment
+            this_expdf = expdf[expdf['cycles_writeattack_cache'] == 0]
+
             # Now make sure that there will only be one value per configuration
-            columns = expdf.columns.values.tolist()
+            columns = this_expdf.columns.values.tolist()
             aggfunc = {}
             for c in columns:
                 aggfunc[c] = 'last'
             aggfunc['cycles_cold_cache'] = 'median'
             aggfunc['cycles_warm_cache'] = 'median'
-            expdf = expdf.groupby(df.cache_config).aggregate(aggfunc)
+            this_expdf = this_expdf.groupby(df.cache_config).aggregate(aggfunc)
 
             # Sort the dataframe
-            expdf = expdf.sort_values('dcache_size')
+            this_expdf = this_expdf.sort_values('dcache_size')
 
-            if len(expdf.index) < 10:
+            if len(this_expdf.index) < 10:
                 # not enough measurements
                 logger.warning("For benchmark {} ".format(bm) +
                                "and configuration i{} ".format(icache_conf) +
@@ -73,10 +77,42 @@ def select_measurements(input_dir, output_dir):
             else:
                 # This is a filtered dataframe, output to CSV
                 outputfile = join(output_dir,
-                                "rv32-experiment-{}-1-i{}.csv".format(bm,
-                                                                      icache_conf))
+                                  "rv32-experiment-{}-1-i{}.csv".format(bm,
+                                                                        icache_conf))
                 logger.info("Writing to this output file: {}".format(outputfile))
-                expdf.to_csv(outputfile, index=False, sep=",")
+                this_expdf.to_csv(outputfile, index=False, sep=",")
+
+            # NOW WITH WRITEATTACK
+            # Delete the rows that have a zero writeattack column,
+            # they are from another experiment
+            this_expdf = expdf[expdf['cycles_writeattack_cache'] != 0]
+
+            # Now make sure that there will only be one value per configuration
+            columns = this_expdf.columns.values.tolist()
+            aggfunc = {}
+            for c in columns:
+                aggfunc[c] = 'last'
+            aggfunc['cycles_cold_cache'] = 'median'
+            aggfunc['cycles_warm_cache'] = 'median'
+            aggfunc['cycles_writeattack_cache'] = 'median'
+            this_expdf = this_expdf.groupby(df.cache_config).aggregate(aggfunc)
+
+            # Sort the dataframe
+            this_expdf = this_expdf.sort_values('dcache_size')
+
+            if len(this_expdf.index) < 10:
+                # not enough measurements
+                logger.warning("For benchmark {} ".format(bm) +
+                               "and configuration i{} ".format(icache_conf) +
+                               "there aren't enough measurements")
+            else:
+                # This is a filtered dataframe, output to CSV
+                outputfile = join(output_dir,
+                                  "rv32-experiment-{}-4-i{}.csv".format(bm,
+                                                                        icache_conf))
+                logger.info("Writing to this output file: {}".format(outputfile))
+                this_expdf.to_csv(outputfile, index=False, sep=",")
+            # ~NOW WITH WRITEATTACK
 
         # Second experiment, for each d-cache size growing size of i-caches
         for dcache_conf in cache_configurations.keys():
@@ -92,6 +128,10 @@ def select_measurements(input_dir, output_dir):
             # Filter the dataframe
             mask = df['cache_config'].isin(cache_configs)
             expdf = df[mask]
+
+            # Delete the rows that have a non-zero writeattack column,
+            # they are from another experiment
+            expdf = expdf[expdf['cycles_writeattack_cache'] == 0]
 
             # Now make sure that there will only be one value per configuration
             columns = expdf.columns.values.tolist()
@@ -131,6 +171,10 @@ def select_measurements(input_dir, output_dir):
         # Filter the dataframe
         mask = df['cache_config'].isin(cache_configs)
         expdf = df[mask]
+
+        # Delete the rows that have a non-zero writeattack column,
+        # they are from another experiment
+        expdf = expdf[expdf['cycles_writeattack_cache'] == 0]
 
         # Now make sure that there will only be one value per configuration
         columns = expdf.columns.values.tolist()
