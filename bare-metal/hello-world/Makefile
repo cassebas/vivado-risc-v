@@ -1,13 +1,13 @@
-CROSS_COMPILE = ../../workspace/gcc/riscv/bin/riscv64-unknown-elf-
+CROSS_COMPILE = ../../workspace/gcc/riscv/bin/riscv32-unknown-elf-
 
 CC=$(CROSS_COMPILE)gcc
 OBJCOPY=$(CROSS_COMPILE)objcopy
 OBJDUMP=$(CROSS_COMPILE)objdump
 
-CFLAGS = -march=rv64imfd -mabi=lp64d -fno-builtin -ffreestanding
+CFLAGS = -march=rv32imac -mabi=ilp32
 
 CCFLAGS = $(CFLAGS)
-CCFLAGS += -mcmodel=medany -O0 -Wall
+CCFLAGS += -mcmodel=medany -O2 -Wall -g
 CCFLAGS += -fno-pic -fno-common -g -I.
 
 LFLAGS = -static -nostartfiles -T main.lds

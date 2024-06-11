@@ -570,13 +570,15 @@ static int download(void) {
         asm volatile ("addi t2, t2, 8");
         asm volatile ("bne  t0, t1, boot_rom_memcpy");
         asm volatile ("fence.i" ::: "memory");
-        asm volatile ("jr   a5");
+        asm volatile ("jalr a5");
+    } else {
+        asm volatile ("fence.i" ::: "memory");
+        asm volatile ("jalr %0" :: "r" (entry_addr));
     }
-    asm volatile ("fence.i" ::: "memory");
-    asm volatile ("jr %0" :: "r" (entry_addr));
 
     return 0;
 }
+
 
 int main(void) {
     uint64_t * bss = (uint64_t *)_fbss;
@@ -590,8 +592,12 @@ int main(void) {
         if (errno) {
             kprintf("Cannot mount SD: %s\n", errno_to_str());
         }
-        else if (download() != 0) {
-            kprintf("Cannot read BOOT.ELF: %s\n", errno_to_str());
+        else {
+            if (download() != 0) {
+                kprintf("Cannot read BOOT.ELF: %s\n", errno_to_str());
+            } else {
+                kprintf("Returned from main program.\n");
+            }
         }
         if (fd.obj.fs) f_close(&fd);
         usleep(1000000);

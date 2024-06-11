@@ -16,6 +16,17 @@ struct uart_regs {
     volatile uint32_t control;
 };
 
+char kgetc(void)
+{
+    char c;
+    struct uart_regs *regs = (struct uart_regs *)0x60010000;
+    while ( !(regs->status & SR_RX_FIFO_VALID_DATA) )
+        ;
+
+    c = (char) (regs->rx_fifo & 0xff);
+    return c;
+}
+
 void kputc(char ch) {
     struct uart_regs * regs = (struct uart_regs *)0x60010000;
     while (regs->status & SR_TX_FIFO_FULL) {}
