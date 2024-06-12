@@ -4,7 +4,7 @@
 /bootrom/system.dts
 /vhdl-wrapper/bin/
 /debian-riscv64/
-/workspace
+/workspace/
 /target/
 /project/target/
 /project/project/target/
@@ -13,3 +13,10 @@
 .python-version
 make-rv32-generated.sh
 src/main/scala/rocket_generated_cacheconfigs.scala
+/.bash_history
+/.cache/
+/.config/
+/.flexlmrc
+/.ivy2/
+/.sbt/
+/.Xilinx/

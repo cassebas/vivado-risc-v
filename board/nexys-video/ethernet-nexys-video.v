@@ -57,9 +57,11 @@ module ethernet_nexys_video (
     input rgmii_rx_clk // Ethernet receive clock (required)
 );
 
+// Nexys Video board uses RTL8211E-VB phy, TXDLY off, RXDLY off
+
 wire rgmii_rx_clk_delay;
 
-assign status_vector[15:9] = 0;
+assign status_vector[15:11] = 0;
 
 eth_mac_1g_rgmii_fifo #(
     .TARGET("XILINX"),
@@ -113,8 +115,11 @@ eth_mac_inst (
     .rx_fifo_overflow(status_vector[6]),
     .rx_fifo_bad_frame(status_vector[7]),
     .rx_fifo_good_frame(status_vector[8]),
+    .speed(status_vector[10:9]),
 
-    .ifg_delay(12)
+    .cfg_ifg(8'd12),
+    .cfg_tx_enable(1'b1),
+    .cfg_rx_enable(1'b1)
 );
 
 (* IODELAY_GROUP = "rgmii_idelay_group" *)

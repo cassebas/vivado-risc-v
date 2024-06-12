@@ -14,19 +14,41 @@ include board/$(BOARD)/Makefile.inc
 
 all: bitstream
 
+# --- docker ---------------
+
+DOCKER_VIVADO_VERSION ?= 2023.2
+DOCKER_ARGS ?=
+
+docker-image:
+	cd docker && docker build --build-arg HOST_UID=`id -u` --build-arg HOST_GID=`id -g` --build-arg VIVADO_VERSION=$(DOCKER_VIVADO_VERSION) --tag vivado-risc-v-tools:$(DOCKER_VIVADO_VERSION) .
+
+docker-shell:
+	docker container run --interactive --tty --rm --volume .:/src $(DOCKER_ARGS) --user `id -u`:`id -g` --network host vivado-risc-v-tools:$(DOCKER_VIVADO_VERSION) bash --login || true
+
 # --- packages and repos ---
 
 apt-install:
 	sudo apt update
 	sudo apt upgrade
-	sudo apt install default-jdk device-tree-compiler python curl gawk \
-	 libtinfo5 libmpc-dev libssl-dev gcc gcc-riscv64-linux-gnu flex bison
+	sudo apt install default-jdk device-tree-compiler curl gawk \
+	 libtinfo5 libmpc-dev libssl-dev gcc gcc-riscv64-linux-gnu flex bison bc parted udev dosfstools
+ifeq ($(shell test -r /etc/os-release && . /etc/os-release && echo $$VERSION_CODENAME),jammy)
+	sudo apt install python-is-python3
+else
+	sudo apt install python
+endif
 
 apt-install-qemi:
 	sudo apt install qemu-system-misc opensbi u-boot-qemu qemu-utils
 
 # skip submodules which are not needed and take long time to update
 SKIP_SUBMODULES = torture software/gemmini-rocc-tests software/onnxruntime-riscv
+
+update:
+	git pull --no-recurse-submodules
+	rm -rf workspace/patch-*-done
+	git submodule sync --recursive
+	git $(foreach m,$(SKIP_SUBMODULES),-c submodule.$(m).update=none) submodule update --init --force --recursive
 
 update-submodules:
 	rm -rf workspace/patch-*-done
@@ -37,9 +59,13 @@ clean-submodules:
 	git submodule foreach --recursive git clean -xfdq
 	rm -rf workspace/patch-*-done
 
+clean-sbt:
+	rm -rf ~/.cache ~/.config/jgit ~/.ivy2 ~/.sbt
+
 clean:
+	rm -rf workspace/patch-*-done
 	git submodule foreach --recursive git clean -xfdq
-	sudo rm -rf debian-riscv64 workspace/patch-*-done
+	sudo rm -rf debian-riscv64 target project/target project/project/target generators/targetutils/target vhdl-wrapper/bin
 
 # --- download gcc, initrd and rootfs from github.com ---
 
@@ -57,14 +83,14 @@ workspace/gcc/riscv: workspace/gcc/tools.tar.gz
 debian-riscv64/initrd:
 	mkdir -p debian-riscv64
 	curl --netrc --location --header 'Accept: application/octet-stream' \
-	  https://api.github.com/repos/eugene-tarassov/vivado-risc-v/releases/assets/134982224 \
+	  https://api.github.com/repos/eugene-tarassov/vivado-risc-v/releases/assets/158580561 \
 	  -o $@.tmp
 	mv $@.tmp $@
 
 debian-riscv64/rootfs.tar.gz:
 	mkdir -p debian-riscv64
 	curl --netrc --location --header 'Accept: application/octet-stream' \
-	  https://api.github.com/repos/eugene-tarassov/vivado-risc-v/releases/assets/134982229 \
+	  https://api.github.com/repos/eugene-tarassov/vivado-risc-v/releases/assets/158580569 \
 	  -o $@.tmp
 	mv $@.tmp $@
 
@@ -196,7 +222,7 @@ CHISEL_SRC_DIRS = \
   generators/sifive-cache/design/craft \
   generators/testchipip/src/main
 
-CHISEL_SRC := $(foreach path, $(CHISEL_SRC_DIRS), $(shell test -d $(path) && find $(path) -iname "*.scala"))
+CHISEL_SRC := $(foreach path, $(CHISEL_SRC_DIRS), $(shell test -d $(path) && find $(path) -iname "*.scala" -not -name ".*"))
 FIRRTL = java -Xmx12G -Xss8M $(JAVA_OPTIONS) -cp `realpath target/scala-*/system.jar` firrtl.stage.FirrtlMain
 
 workspace/patch-hdl-done:
@@ -209,6 +235,7 @@ workspace/patch-hdl-done:
 
 # Generate default device tree - not including peripheral devices or board specific data
 workspace/$(CONFIG)/system.dts: $(CHISEL_SRC) rocket-chip/bootrom/bootrom.img workspace/patch-hdl-done
+	rm -rf workspace/$(CONFIG)/tmp
 	mkdir -p workspace/$(CONFIG)/tmp
 	cp rocket-chip/bootrom/bootrom.img workspace/bootrom.img
 	$(SBT) "runMain freechips.rocketchip.diplomacy.Main --dir `realpath workspace/$(CONFIG)/tmp` --top Vivado.RocketSystem --config Vivado.$(CONFIG_SCALA)"
@@ -217,6 +244,7 @@ workspace/$(CONFIG)/system.dts: $(CHISEL_SRC) rocket-chip/bootrom/bootrom.img wo
 
 # Generate board specific device tree, boot ROM and FIRRTL
 workspace/$(CONFIG)/system-$(BOARD)/RocketSystem.fir: workspace/$(CONFIG)/system.dts $(wildcard bootrom/*) workspace/gcc/riscv
+	rm -rf workspace/$(CONFIG)/system-$(BOARD)
 	mkdir -p workspace/$(CONFIG)/system-$(BOARD)
 	cat workspace/$(CONFIG)/system.dts board/$(BOARD)/bootrom.dts >bootrom/system.dts
 	sed -i "s#reg = <0x80000000 *0x.*>#reg = <$(MEMORY_ADDR_RANGE32)>#g" bootrom/system.dts
