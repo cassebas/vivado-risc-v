@@ -4,6 +4,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/interrupt.h>
+#include <linux/platform_device.h>
 #include <linux/etherdevice.h>
 #include <linux/ethtool.h>
 #include <linux/of_device.h>
@@ -104,6 +105,7 @@ struct axi_eth_stats {
 };
 
 struct axi_eth_priv {
+    unsigned dev_no;
     struct eth_regs __iomem * regs;
     struct eth_pkt_regs __iomem * rx_pkt_regs;
     struct eth_pkt_regs __iomem * tx_pkt_regs;
@@ -229,7 +231,7 @@ static int axi_eth_mdio_register(struct axi_eth_priv * priv) {
     mdio_bus->priv = priv;
     mdio_bus->parent = &priv->pdev->dev;
     mdio_bus->name = MDIO_BUS_NAME;
-    snprintf(mdio_bus->id, MII_BUS_ID_SIZE, "%s-%d", mdio_bus->name, priv->pdev->id);
+    snprintf(mdio_bus->id, MII_BUS_ID_SIZE, "%s-%u", mdio_bus->name, priv->dev_no);
 
     mdio_bus->read = axi_eth_mdio_read;
     mdio_bus->write = axi_eth_mdio_write;
@@ -534,7 +536,7 @@ static int axi_eth_ioctl(struct net_device * net_dev, struct ifreq * ifr, int cm
 }
 
 static void axi_eth_get_drvinfo(struct net_device * dev, struct ethtool_drvinfo * info) {
-    strlcpy(info->driver, DRIVER_NAME, sizeof(info->driver));
+    strscpy(info->driver, DRIVER_NAME, sizeof(info->driver));
 }
 
 static u32 axi_eth_get_msglevel(struct net_device * dev) {
@@ -678,6 +680,7 @@ static const struct net_device_ops axi_eth_ops = {
 
 /* Setup and register the device. */
 static int axi_eth_probe(struct platform_device * pdev) {
+    static unsigned dev_no = 0;
     struct net_device * net_dev = NULL;
     struct axi_eth_priv * priv = NULL;
     struct resource * iomem;
@@ -714,6 +717,7 @@ static int axi_eth_probe(struct platform_device * pdev) {
     priv->pdev = pdev;
     priv->net_dev = net_dev;
     priv->irq = irq;
+    priv->dev_no = dev_no++;
 
     maddr = of_get_property(pdev->dev.of_node, "local-mac-address", &len);
     if (maddr && len == ETH_ALEN) {
