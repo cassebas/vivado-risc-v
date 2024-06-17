@@ -49,6 +49,15 @@ int main(void) {
     uintptr_t mhartid;
     asm volatile("csrr %0, mhartid" : "=r"(mhartid));
 
+    // Test the BRAM memory on the FPGA
+    volatile uint32_t *boot_memory = (uint32_t *)0x60050000;
+    for (int i=0; i<0x4000; i+=10) {
+        boot_memory[i] = i;
+    }
+    for (int i=0; i<0x4000; i+=10) {
+        kprintf("boot_memory[%d] == %d\n", i, boot_memory[i]);
+    }
+
     volatile uint32_t *led_register = (uint32_t *)0x60040000;
     uint8_t state = 0;
     *led_register = state;
