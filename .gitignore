@@ -20,3 +20,5 @@ src/main/scala/rocket_generated_cacheconfigs.scala
 /.ivy2/
 /.sbt/
 /.Xilinx/
+/bare-metal/hello-world/binary2coefficient
+/bare-metal/hello-world/boot.coe
