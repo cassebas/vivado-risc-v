@@ -51,11 +51,13 @@ int main(void) {
 
     // Test the BRAM memory on the FPGA
     volatile uint32_t *boot_memory = (uint32_t *)0x60050000;
-    for (int i=0; i<0x4000; i+=10) {
-        boot_memory[i] = i;
-    }
-    for (int i=0; i<0x4000; i+=10) {
-        kprintf("boot_memory[%d] == %d\n", i, boot_memory[i]);
+    /* for (int i=0; i<0x4000; i+=10) { */
+    /*     boot_memory[i] = i; */
+    /* } */
+    for (int i=0; i<0x4000; i++) {
+        kprintf("boot_memory[%d] == 0x", i);
+        print_hex(boot_memory[i], 8);
+        kprintf("\n");
     }
 
     volatile uint32_t *led_register = (uint32_t *)0x60040000;
