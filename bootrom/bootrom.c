@@ -7,6 +7,8 @@
 #include "common.h"
 #include "kprintf.h"
 
+#include "blockram.h"
+
 /* Card type flags (card_type) */
 #define CT_MMC          0x01            /* MMC ver 3 */
 #define CT_SD1          0x02            /* SD ver 1 */
@@ -129,7 +131,7 @@ static BYTE card_type __attribute__((section(".bss")));
 static uint32_t response[4] __attribute__((section(".bss")));
 static FATFS fatfs __attribute__((section(".bss")));
 static int alt_mem __attribute__((section(".bss")));
-static FIL fd __attribute__((section(".bss")));
+static BlockRam fd __attribute__((section(".bss")));
 
 extern unsigned char _fbss[];
 extern unsigned char _ebss[];
@@ -166,6 +168,28 @@ static const char * errno_to_str(void) {
     case ERR_BUF_ALIGNMENT: return "Bad buffer alignment";
     }
     return "Unknown error code";
+}
+
+#define MAX_BUF 64
+/*
+ * Print an integer in hexadecimal format.
+ */
+static void print_hex(uintptr_t h, uint8_t n) {
+    // Maxixum digits to print is MAX_BUF-1 digits + \0
+    char buf[MAX_BUF];
+    buf[n] = '\0';
+    char c;
+    while (n--) {
+        c = (char) (h & 0x0F);
+        if (c < 10) {
+            c = c + '0';
+        } else {
+            c = c + 'A' - 10;
+        }
+        buf[n] = c;
+        h >>= 4;
+    }
+    kprintf("%s", buf);
 }
 
 static void usleep(unsigned us) {
@@ -415,7 +439,7 @@ static uintptr_t read_num(unsigned size) {
     unsigned n = 0;
     UINT rd;
     if (errno) return 0;
-    errno = f_read(&fd, buf, size, &rd);
+    errno = br_read(&fd, buf, size, &rd);
     if (errno) return 0;
     if (rd < size) {
         errno = ERR_EOF;
@@ -442,11 +466,11 @@ static int download(void) {
     uint16_t phnum = 0;
     unsigned i = 0;
 
-    errno = f_open(&fd, fnm, FA_READ);
+    errno = br_open(&fd, fnm, FA_READ);
     if (errno) return -1;
 
     UINT rd = 0;
-    errno = f_read(&fd, buf, 6, &rd);
+    errno = br_read(&fd, buf, 6, &rd);
     if (errno) return -1;
     if (rd < 6) {
         errno = ERR_EOF;
@@ -464,11 +488,11 @@ static int download(void) {
         errno = ERR_ELF_ENDIANNESS;
         return -1;
     }
-    errno = f_lseek(&fd, 24);
+    errno = br_lseek(&fd, 24);
     entry_addr = read_addr();
     phoff = read_addr();
     if (errno) return -1;
-    errno = f_lseek(&fd, f_tell(&fd) + (__riscv_xlen>>3) + 6);
+    errno = br_lseek(&fd, br_tell(&fd) + (__riscv_xlen>>3) + 6);
     phentsize = read_uint16();
     phnum = read_uint16();
     if (errno) return -1;
@@ -480,18 +504,18 @@ static int download(void) {
         uint64_t p_memsz = 0;
         uintptr_t addr = 0;
         size_t pos = 0;
-        errno = f_lseek(&fd, phoff + i * phentsize);
+        errno = br_lseek(&fd, phoff + i * phentsize);
         p_type = read_uint32();
         if (errno) return -1;
         if (p_type != PT_LOAD) continue;
-        errno = f_lseek(&fd, f_tell(&fd) + (__riscv_xlen == 32 ? 0 : 4));
+        errno = br_lseek(&fd, br_tell(&fd) + (__riscv_xlen == 32 ? 0 : 4));
         p_offset = read_addr();
         p_vaddr = read_addr();
         read_addr(); /* p_paddr */
         p_filesz = read_addr();
         p_memsz = read_addr();
         if (errno) return -1;
-        errno = f_lseek(&fd, p_offset);
+        errno = br_lseek(&fd, p_offset);
         if (errno) return -1;
         addr = p_vaddr;
         while (pos < p_filesz && pos < p_memsz) {
@@ -504,7 +528,7 @@ static int download(void) {
                 if (addr + size > BOOTROM_MEM_END) size = BOOTROM_MEM_END - addr;
                 alt_mem = 1;
             }
-            errno = f_read(&fd, mem, size, &rd);
+            errno = br_read(&fd, mem, size, &rd);
             if (errno) return -1;
             if (rd == 0) {
                 errno = ERR_EOF;
@@ -532,7 +556,7 @@ static int download(void) {
             pos += size;
         }
     }
-    errno = f_close(&fd);
+    errno = br_close(&fd);
     if (errno) return -1;
 
     asm volatile ("li  a0, 0"); // Hart No
@@ -586,9 +610,15 @@ int main(void) {
 
     for (;;) {
         kputs("");
-        kprintf("RISC-V %d, Boot ROM V3.8\n", __riscv_xlen);
+        kprintf("RISC-V %d, Boot ROM V3.8.1\n", __riscv_xlen);
+
+        volatile uint32_t *boot_memory = (uint32_t *)0x60050000;
+        kprintf("boot_memory[0] = 0x");
+        print_hex(boot_memory[0], 8);
+        kprintf("\n");
+
         drv_status = STA_NOINIT;
-        errno = f_mount(&fatfs, "", 1);
+        errno = br_mount(&fatfs, "", 1);
         if (errno) {
             kprintf("Cannot mount SD: %s\n", errno_to_str());
         }
@@ -599,7 +629,7 @@ int main(void) {
                 kprintf("Returned from main program.\n");
             }
         }
-        if (fd.obj.fs) f_close(&fd);
+        /* if (fd.obj.fs) br_close(&fd); */
         usleep(1000000);
     }
     return 0;

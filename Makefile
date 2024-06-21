@@ -323,7 +323,7 @@ vivado-tcl: workspace/$(CONFIG)/system-$(BOARD).tcl
 $(proj_time): workspace/$(CONFIG)/system-$(BOARD).tcl
 	if [ ! -e $(proj_path) ] ; then $(vivado) -source workspace/$(CONFIG)/system-$(BOARD).tcl || ( rm -rf $(proj_path) ; exit 1 ) ; fi
 	if [ -e $(proj_path) ] ; then $(vivado) -source board/$(BOARD)/boot_control.tcl; fi
-	if [ -e $(proj_path) ] ; then $(vivado) -source board/$(BOARD)/boot_memory.tcl; fi
+	if [ -e $(proj_path) ] ; then $(vivado) -source board/$(BOARD)/boot_module.tcl; fi
 	date >$@
 
 vivado-project: $(proj_time)

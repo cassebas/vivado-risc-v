@@ -29,8 +29,8 @@ include ../board/$(BOARD)/bootrom.inc
 
 else
 
-%.elf: $(dtb) head.S kprintf.c bootrom.c ff.c ffunicode.c
-	$(CC) $(CCFLAGS) -DDEVICE_TREE='"$(dtb)"' $(LFLAGS) -o $@ head.S kprintf.c bootrom.c ff.c ffunicode.c
+%.elf: $(dtb) head.S kprintf.c bootrom.c blockram.c ff.c ffunicode.c
+	$(CC) $(CCFLAGS) -DDEVICE_TREE='"$(dtb)"' $(LFLAGS) -o $@ head.S kprintf.c bootrom.c blockram.c ff.c ffunicode.c
 
 endif
 
