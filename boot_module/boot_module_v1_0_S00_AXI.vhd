@@ -95,7 +95,7 @@ architecture arch_imp of boot_module_v1_0_S00_AXI is
 	signal axi_wready	: std_logic;
 	signal axi_bresp	: std_logic_vector(1 downto 0);
 	signal axi_bvalid	: std_logic;
-	signal axi_araddr	: std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
+	-- signal axi_araddr	: std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
 	signal axi_arready	: std_logic;
 	signal axi_rdata	: std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
 	signal axi_rresp	: std_logic_vector(1 downto 0);
@@ -123,10 +123,14 @@ architecture arch_imp of boot_module_v1_0_S00_AXI is
 	signal byte_index	: integer;
 	signal aw_en	: std_logic;
 
-    constant BRAM_DELAY    : natural := 2;
-    signal bram_addr_ready : std_logic;
-    signal bram_data_valid : std_logic;
-    signal bram_addr       : std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
+    constant BRAM_DELAY     : natural := 2;
+    signal bram_raddr_ready : std_logic;
+    signal bram_waddr_ready : std_logic;
+    signal bram_rdata_ready : std_logic;
+    signal bram_wdata_ready : std_logic;
+    signal bram_addr        : std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
+    signal bram_wea         : std_logic_vector((C_S_AXI_DATA_WIDTH/8)-1 downto 0);
+
 begin
 	-- I/O Connections assignments
 
@@ -168,46 +172,46 @@ begin
 	--   end if;
 	-- end process;
 
-	-- Implement axi_awaddr latching
-	-- This process is used to latch the address when both 
-	-- S_AXI_AWVALID and S_AXI_WVALID are valid. 
-	process (S_AXI_ACLK)
-	begin
-	  if rising_edge(S_AXI_ACLK) then 
-	    if S_AXI_ARESETN = '0' then
-	      axi_awaddr <= (others => '0');
-	    else
-	      if (axi_awready = '0' and S_AXI_AWVALID = '1' and S_AXI_WVALID = '1' and aw_en = '1') then
-	        -- Write Address latching
-	        axi_awaddr <= S_AXI_AWADDR;
-	      end if;
-	    end if;
-	  end if;
-	end process;
+	-- -- Implement axi_awaddr latching
+	-- -- This process is used to latch the address when both 
+	-- -- S_AXI_AWVALID and S_AXI_WVALID are valid. 
+	-- process (S_AXI_ACLK)
+	-- begin
+	--   if rising_edge(S_AXI_ACLK) then 
+	--     if S_AXI_ARESETN = '0' then
+	--       axi_awaddr <= (others => '0');
+	--     else
+	--       if (axi_awready = '0' and S_AXI_AWVALID = '1' and S_AXI_WVALID = '1' and aw_en = '1') then
+	--         -- Write Address latching
+	--         axi_awaddr <= S_AXI_AWADDR;
+	--       end if;
+	--     end if;
+	--   end if;
+	-- end process;
 
-	-- Implement axi_wready generation
-	-- axi_wready is asserted for one S_AXI_ACLK clock cycle when both
-	-- S_AXI_AWVALID and S_AXI_WVALID are asserted. axi_wready is 
-	-- de-asserted when reset is low. 
+	-- -- Implement axi_wready generation
+	-- -- axi_wready is asserted for one S_AXI_ACLK clock cycle when both
+	-- -- S_AXI_AWVALID and S_AXI_WVALID are asserted. axi_wready is 
+	-- -- de-asserted when reset is low. 
 
-	process (S_AXI_ACLK)
-	begin
-	  if rising_edge(S_AXI_ACLK) then 
-	    if S_AXI_ARESETN = '0' then
-	      axi_wready <= '0';
-	    else
-	      if (axi_wready = '0' and S_AXI_WVALID = '1' and S_AXI_AWVALID = '1' and aw_en = '1') then
-	          -- slave is ready to accept write data when 
-	          -- there is a valid write address and write data
-	          -- on the write address and data bus. This design 
-	          -- expects no outstanding transactions.           
-	          axi_wready <= '1';
-	      else
-	        axi_wready <= '0';
-	      end if;
-	    end if;
-	  end if;
-	end process; 
+	-- process (S_AXI_ACLK)
+	-- begin
+	--   if rising_edge(S_AXI_ACLK) then 
+	--     if S_AXI_ARESETN = '0' then
+	--       axi_wready <= '0';
+	--     else
+	--       if (axi_wready = '0' and S_AXI_WVALID = '1' and S_AXI_AWVALID = '1' and aw_en = '1') then
+	--           -- slave is ready to accept write data when 
+	--           -- there is a valid write address and write data
+	--           -- on the write address and data bus. This design 
+	--           -- expects no outstanding transactions.           
+	--           axi_wready <= '1';
+	--       else
+	--         axi_wready <= '0';
+	--       end if;
+	--     end if;
+	--   end if;
+	-- end process; 
 
 
 	-- Implement write response logic generation
@@ -222,14 +226,14 @@ begin
 	      axi_bvalid  <= '0';
 	      axi_bresp   <= "00"; --need to work more on the responses
 	    else
-	      if (axi_awready = '1' and S_AXI_AWVALID = '1' and axi_wready = '1' and S_AXI_WVALID = '1' and axi_bvalid = '0'  ) then
+	      if axi_wready = '1' and S_AXI_WVALID = '1' and axi_bvalid = '0' then
 	        axi_bvalid <= '1';
 	        axi_bresp  <= "00"; 
 	      elsif (S_AXI_BREADY = '1' and axi_bvalid = '1') then   --check if bready is asserted while bvalid is high)
 	        axi_bvalid <= '0';                                 -- (there is a possibility that bready is always asserted high)
 	      end if;
 	    end if;
-	  end if;                   
+	  end if;
 	end process; 
 
 	-- Implement axi_arready generation
@@ -243,26 +247,29 @@ begin
 	  if rising_edge(S_AXI_ACLK) then 
 	    if S_AXI_ARESETN = '0' then
 	      axi_arready <= '0';
-	      axi_araddr  <= (others => '1');
+	      axi_awready <= '0';
           bram_addr <= (others => '1');
-          bram_addr_ready <= '0';
+          bram_wdata <= (others => '0');
+          bram_wea <= (others => '0');
+          bram_raddr_ready <= '0';
+          bram_waddr_ready <= '0';
 	    else
-	      if (axi_arready = '0' and S_AXI_ARVALID = '1') then
-	        -- indicates that the slave has acceped the valid read address
+	      if axi_arready = '0' and S_AXI_ARVALID = '1' then
 	        axi_arready <= '1';
-            bram_addr_ready <= '1';
-	        -- Read Address latching
-	        axi_araddr  <= S_AXI_ARADDR;
+            bram_raddr_ready <= '1';
             bram_addr <= S_AXI_ARADDR;
-          elsif axi_awready = '0' and S_AXI_AWVALID = '1' then
+          elsif axi_awready = '0' and S_AXI_AWVALID = '1' and S_AXI_WVALID = '1' then
             axi_awready <= '1';
-            bram_addr_ready <= '1';
+            bram_waddr_ready <= '1';
             bram_addr <= S_AXI_AWADDR;
-            axi_awaddr <= S_AXI_AWADDR;
+            bram_wdata <= S_AXI_WDATA;
+            bram_wea <= S_AXI_WSTRB;
 	      else
 	        axi_arready <= '0';
 	        axi_awready <= '0';
-	        bram_addr_ready <= '0';
+	        bram_raddr_ready <= '0';
+	        bram_waddr_ready <= '0';
+            bram_wea <= (others => '0');
 	      end if;
 	    end if;
 	  end if;
@@ -270,9 +277,11 @@ begin
 
 
     bram_addr_o <= bram_addr;
-    bram_data_o <= (others => '0');
-    bram_wea_o <= (others => '0');
+    bram_data_o <= bram_wdata;
+    bram_wea_o <= bram_wea;
 
+    -- bram_rdata
+    -- bram_rdata_ready
 	process (S_AXI_ACLK)
       variable delay_signal : natural := 0;
 	begin
@@ -280,24 +289,49 @@ begin
         if S_AXI_ARESETN = '0' then
           delay_signal := 0;
           bram_rdata <= (others => '0');
-          bram_data_valid <= '0';
+          bram_rdata_ready <= '0';
         else
-          bram_data_valid <= '0';
+          bram_rdata_ready <= '0';
           if delay_signal > 0 then
             delay_signal := delay_signal - 1;
             if delay_signal = 0 then
               bram_rdata <= bram_data_i;
-              bram_data_valid <= '1';
+              bram_rdata_ready <= '1';
             end if;
-          elsif bram_addr_ready = '1' then
+          elsif bram_raddr_ready = '1' then
             delay_signal := BRAM_DELAY;
           end if;
         end if;
       end if;
-    end process; 
+    end process;
+
+    -- bram_wdata
+    -- bram_wdata_ready
+	process (S_AXI_ACLK)
+      variable delay_signal : natural := 0;
+	begin
+      if rising_edge(S_AXI_ACLK) then
+        if S_AXI_ARESETN = '0' then
+          delay_signal := 0;
+          bram_wdata_ready <= '0';
+        else
+          bram_wdata_ready <= '0';
+          if delay_signal > 0 then
+            delay_signal := delay_signal - 1;
+            if delay_signal = 0 then
+              bram_wdata_ready <= '1';
+            end if;
+          elsif bram_waddr_ready = '1' then
+            delay_signal := BRAM_DELAY;
+          end if;
+        end if;
+      end if;
+    end process;
 
 
-	-- Output register or memory read data
+    -- axi_rdata
+    -- axi_rvalid
+    -- axi_rresp
 	process (S_AXI_ACLK) is
 	begin
 	  if rising_edge(S_AXI_ACLK) then
@@ -306,8 +340,8 @@ begin
           axi_rvalid <= '0';
           axi_rresp <= "00";
         else
-          if bram_data_valid = '1' then
-            axi_rdata <= bram_rdata;     -- register read data
+          if bram_rdata_ready = '1' then
+            axi_rdata <= bram_rdata;
             axi_rvalid <= '1';
           elsif axi_rvalid = '1' and S_AXI_RREADY = '1' then
             axi_rvalid <= '0';
@@ -316,6 +350,21 @@ begin
       end if;
 	end process;
 
+    -- axi_wready
+	process (S_AXI_ACLK) is
+	begin
+	  if rising_edge(S_AXI_ACLK) then
+        if S_AXI_ARESETN = '0' then
+          axi_wready <= '0';
+        else
+          if bram_wdata_ready = '1' then
+            axi_wready <= '1';
+          elsif axi_wready = '1' and S_AXI_WVALID = '1' then
+            axi_wready <= '0';
+          end if;
+        end if;
+      end if;
+	end process;
 
 	-- Add user logic here
 

@@ -7,7 +7,7 @@ OBJDUMP=$(CROSS_COMPILE)objdump
 CFLAGS = -march=rv32imac -mabi=ilp32
 
 CCFLAGS = $(CFLAGS)
-CCFLAGS += -mcmodel=medany -O2 -Wall -g
+CCFLAGS += -mcmodel=medany -O0 -Wall -g
 CCFLAGS += -fno-pic -fno-common -g -I.
 
 LFLAGS = -static -nostartfiles -T main.lds

@@ -6,6 +6,8 @@
 
 #define MAX_BUF 64
 
+const uint32_t boot_num = 0xf2f3;
+
 /*
  * Print an integer in hexadecimal format.
  */
@@ -38,31 +40,30 @@ static void usleep(unsigned us) {
 }
 
 int main(void) {
-    // First check return address that bootrom gives us
-    uintptr_t ret_addr=0;
-    /* asm volatile("lw %0, 0(ra)" : "=r"(ret_addr)); */
-    kprintf("Bootrom's return address is ");
-    print_hex(ret_addr, 8);
-    kprintf("\n");
-
     // Get the HART id of the running core
     uintptr_t mhartid;
     asm volatile("csrr %0, mhartid" : "=r"(mhartid));
 
-    // Test the BRAM memory on the FPGA
-    volatile uint32_t *boot_memory = (uint32_t *)0x60050000;
-    /* for (int i=0; i<0x4000; i+=10) { */
-    /*     boot_memory[i] = i; */
-    /* } */
-    for (int i=0; i<0x4000; i++) {
-        kprintf("boot_memory[%d] == 0x", i);
-        print_hex(boot_memory[i], 8);
-        kprintf("\n");
-    }
-
+    // The led register holds a simple state machine that has three
+    // states, idle (no LEDs blinking), blinking (all LEDs blinking) and
+    // counting (LEDs are counting in binary).
     volatile uint32_t *led_register = (uint32_t *)0x60040000;
     uint8_t state = 0;
     *led_register = state;
+
+    // The 'constant' boot_num (changed by the program on each run),
+    // tells us how many times we have booted. It is a constant present
+    // in the binary boot.elf, but since we have the binary in the block
+    // ram, we can alter its contents.
+    kprintf("Bootnum is %d\n", boot_num);
+
+    // Test the block ram memory on the FPGA
+    volatile uint32_t *boot_memory = (uint32_t *)0x60050000;
+    boot_memory[1465] += 1;
+    kprintf("boot_memory[1465] == 0x");
+    print_hex(boot_memory[1465], 8);
+    kprintf("\n");
+
     char c;
     kprintf("Start of helloworld\n");
     kprintf("Press a random character to change state. ");
