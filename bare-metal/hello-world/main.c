@@ -6,7 +6,7 @@
 
 #define MAX_BUF 64
 
-const uint32_t boot_num = 0xf2f3;
+#define BOOT_MEM_PARAM_ADDR 0x200
 
 /*
  * Print an integer in hexadecimal format.
@@ -51,18 +51,21 @@ int main(void) {
     uint8_t state = 0;
     *led_register = state;
 
+    // Test the block ram memory on the FPGA
+    volatile uint32_t *boot_memory = (uint32_t *)0x60050000;
+    kprintf("boot_memory[BOOT_MEM_PARAM_ADDR] == 0x");
+    print_hex(boot_memory[BOOT_MEM_PARAM_ADDR], 8);
+    kprintf("\n");
+
     // The 'constant' boot_num (changed by the program on each run),
     // tells us how many times we have booted. It is a constant present
     // in the binary boot.elf, but since we have the binary in the block
     // ram, we can alter its contents.
+    volatile uint32_t boot_num = boot_memory[BOOT_MEM_PARAM_ADDR];
     kprintf("Bootnum is %d\n", boot_num);
-
-    // Test the block ram memory on the FPGA
-    volatile uint32_t *boot_memory = (uint32_t *)0x60050000;
-    boot_memory[1465] += 1;
-    kprintf("boot_memory[1465] == 0x");
-    print_hex(boot_memory[1465], 8);
-    kprintf("\n");
+    // Put the new 'constant' in the block ram where the boot.elf binary resides
+    boot_num++;
+    boot_memory[BOOT_MEM_PARAM_ADDR] = boot_num;
 
     char c;
     kprintf("Start of helloworld\n");
