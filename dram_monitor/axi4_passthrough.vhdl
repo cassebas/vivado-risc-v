@@ -83,7 +83,12 @@ entity axi4_passthrough is
     M00_AXI_rresp   : in std_logic_vector(1 downto 0);
     M00_AXI_rlast   : in std_logic;
     M00_AXI_rvalid  : in std_logic;
-    M00_AXI_rready  : out std_logic);
+    M00_AXI_rready  : out std_logic;
+
+    -- FIFO ports, used for writing read request addresses
+    fifo_full_i : in std_logic;
+    fifo_din_o  : out std_logic_vector(ADDR_WIDTH-1 downto 0);
+    fifo_wren_o : out std_logic);
 end axi4_passthrough;
 
 architecture behaviour of axi4_passthrough is
@@ -109,6 +114,8 @@ architecture behaviour of axi4_passthrough is
   signal arprot  : std_logic_vector(2 downto 0);
   signal arqos   : std_logic_vector(3 downto 0);
   signal arvalid : std_logic;
+
+  signal fifo_wren : std_logic;
 
 begin
   -- -----------------------------
@@ -218,6 +225,25 @@ begin
   -- Handshake
   M00_AXI_arvalid <= arvalid;
   S00_AXI_arready <= M00_AXI_arready;
+
+  fifo_din_o <= araddr;
+  fifo_wren_o <= fifo_wren;
+  ar_fifo_in : process(aclk, aresetn) is
+  begin
+    if aresetn = '0' then
+      fifo_wren <= '0';
+    elsif rising_edge(aclk) then
+      if fifo_wren = '0' then
+        if S00_AXI_arvalid = '1' and M00_AXI_arready = '1' then
+          if fifo_full_i = '0' then
+            fifo_wren <= '1';
+          end if;
+        end if;
+      else
+        fifo_wren <= '0';
+      end if;
+    end if;
+  end process ar_fifo_in;
 
 
   -- -----------------------------
