@@ -4,8 +4,9 @@ use ieee.numeric_std.all;
 
 entity fiforeader_axilite is
   generic (
-    ADDR_WIDTH : integer := 16;
-    DATA_WIDTH : integer := 32);
+    UART_ADDR_WIDTH : integer := 16;
+    UART_DATA_WIDTH : integer := 32;
+    FIFO_DATA_WIDTH : integer := 100);
   port (
     clk   : in std_logic;
     rst_n : in std_logic;
@@ -13,17 +14,17 @@ entity fiforeader_axilite is
     leds : out std_logic_vector(7 downto 0);
     -- FIFO ports
     fifo_empty_i : in std_logic;
-    fifo_dout_i  : in std_logic_vector(DATA_WIDTH-1 downto 0);
+    fifo_dout_i  : in std_logic_vector(FIFO_DATA_WIDTH-1 downto 0);
     fifo_rden_o  : out std_logic;
     --
     -- AXI Lite master ports
     --
     -- AXI Lite Write Request channel
-    M_AXI_awaddr  : out std_logic_vector(ADDR_WIDTH-1 downto 0);
+    M_AXI_awaddr  : out std_logic_vector(UART_ADDR_WIDTH-1 downto 0);
     M_AXI_awvalid : out std_logic;
     M_AXI_awready : in std_logic;
     -- AXI Lite Write Data channel
-    M_AXI_wdata   : out std_logic_vector(DATA_WIDTH-1 downto 0);
+    M_AXI_wdata   : out std_logic_vector(UART_DATA_WIDTH-1 downto 0);
     M_AXI_wvalid  : out std_logic;
     M_AXI_wready  : in std_logic;
     -- AXI Lite Write Response channel
@@ -31,11 +32,11 @@ entity fiforeader_axilite is
     M_AXI_bvalid  : in std_logic;
     M_AXI_bready  : out std_logic;
     -- AXI Lite Read Request channel
-    M_AXI_araddr  : out std_logic_vector(ADDR_WIDTH-1 downto 0);
+    M_AXI_araddr  : out std_logic_vector(UART_ADDR_WIDTH-1 downto 0);
     M_AXI_arvalid : out std_logic;
     M_AXI_arready : in std_logic;
     -- AXI Lite Read Data channel
-    M_AXI_rdata   : in std_logic_vector(DATA_WIDTH-1 downto 0);
+    M_AXI_rdata   : in std_logic_vector(UART_DATA_WIDTH-1 downto 0);
     M_AXI_rresp   : in std_logic_vector(1 downto 0);
     M_AXI_rvalid  : in std_logic;
     M_AXI_rready  : out std_logic);
@@ -67,7 +68,8 @@ architecture behaviour of fiforeader_axilite is
   end function convert_to_ascii;
 
   -- Input data received from the FIFO
-  signal fifo_dreg : std_logic_vector(DATA_WIDTH-1 downto 0);
+  signal fifo_dreg : std_logic_vector(FIFO_DATA_WIDTH-1 downto 0);
+  signal fifo_tmp  : std_logic_vector(FIFO_DATA_WIDTH-1 downto 0);
 
   type fifo_read_state_type is (FIFO_IDLE,
                                 FIFO_ENABLE,
@@ -81,51 +83,50 @@ architecture behaviour of fiforeader_axilite is
                                AXI_WRITE_RESP);
   signal axi_lite_state, axi_lite_state_nxt : axi_lite_state_type;
 
-  -- The data will be sent by 4 bits per transfer, because we want to print
-  -- them as hexademicals encoded with ascii characters. Each address is
-  -- 32 bits wide, so we need 8 nibbles.
-  signal send_nibble_state, send_nibble_state_nxt : unsigned(3 downto 0);
-  constant ZERO : unsigned(3 downto 0) := "1011";
-  constant HEXX : unsigned(3 downto 0) := "1010";
-  -- Most significant nibble
-  constant NIB7 : unsigned(3 downto 0) := "1001";
-  constant NIB6 : unsigned(3 downto 0) := "1000";
-  constant NIB5 : unsigned(3 downto 0) := "0111";
-  constant NIB4 : unsigned(3 downto 0) := "0110";
-  constant NIB3 : unsigned(3 downto 0) := "0101";
-  constant NIB2 : unsigned(3 downto 0) := "0100";
-  constant NIB1 : unsigned(3 downto 0) := "0011";
-  -- Least significant nibble
-  constant NIB0 : unsigned(3 downto 0) := "0010";
-  constant NEWL : unsigned(3 downto 0) := "0001";
-  constant CRET : unsigned(3 downto 0) := "0000";
+  -- The data will be sent to the terminal by 4 bits per transfer,
+  -- because we want to print them as hexademicals encoded with
+  -- ascii characters. Each address is 32 bits wide, data 64 bits.
+  -- Including some print characters we need 31 states.
+  --
+  -- This will be printed per line: 0x<32bits> 0x<64bits>LFCR
+  constant NIBBLE_STATE_LEN    : integer := 5;
+  signal send_nibble_state     : unsigned(NIBBLE_STATE_LEN-1 downto 0);
+  signal send_nibble_state_nxt : unsigned(NIBBLE_STATE_LEN-1 downto 0);
+  -- Some named constants at fixed positions to be printed
+  constant NUL1 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "00000";
+  constant HEX1 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "00001";
+  constant SP   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "01010";
+  constant NUL2 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "01011";
+  constant HEX2 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "01100";
+  constant LF   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "11101";
+  constant CR   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "11110";
 
   --
   -- AXI Lite signals
   --
   -- AXI Lite Write Request channel
-  signal axi_awaddr  : std_logic_vector(ADDR_WIDTH-1 downto 0);
+  signal axi_awaddr  : std_logic_vector(UART_ADDR_WIDTH-1 downto 0);
   signal axi_awvalid : std_logic;
   -- AXI Lite Write Data channel
-  signal axi_wdata   : std_logic_vector(DATA_WIDTH-1 downto 0);
+  signal axi_wdata   : std_logic_vector(UART_DATA_WIDTH-1 downto 0);
   signal axi_wvalid  : std_logic;
   -- AXI Lite Write Response channel
   signal axi_bready  : std_logic;
   -- AXI Lite Read Request channel
-  signal axi_araddr  : std_logic_vector(ADDR_WIDTH-1 downto 0);
+  signal axi_araddr  : std_logic_vector(UART_ADDR_WIDTH-1 downto 0);
   signal axi_arvalid : std_logic;
-  signal axi_rdata   : std_logic_vector(DATA_WIDTH-1 downto 0);
+  signal axi_rdata   : std_logic_vector(UART_DATA_WIDTH-1 downto 0);
   -- AXI Lite Read Data channel
   signal axi_rready  : std_logic;
 
   -- Read from UART: address is 4'h08
-  constant AXI_READ_STATUS_ADDR : std_logic_vector(ADDR_WIDTH-1 downto 0) :=
+  constant AXI_READ_STATUS_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
     (3 => '1', others => '0');
   -- Write to UART tx buffer: address is 4'h04
-  constant AXI_WRITE_TXBUF_ADDR : std_logic_vector(ADDR_WIDTH-1 downto 0) :=
+  constant AXI_WRITE_TXBUF_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
     (2 => '1', others => '0');
   -- Write to UART control register: address is 4'h0c
-  constant AXI_WRITE_CONTROL_ADDR : std_logic_vector(ADDR_WIDTH-1 downto 0) :=
+  constant AXI_WRITE_CONTROL_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
     (3 => '1', 2 => '1', others => '0');
 
 begin
@@ -134,7 +135,7 @@ begin
   begin
     if rst_n = '0' then
       fifo_read_state <= FIFO_IDLE;
-      send_nibble_state <= ZERO;
+      send_nibble_state <= NUL1;
       axi_lite_state <= AXI_IDLE;
     elsif rising_edge(clk) then
       fifo_read_state <= fifo_read_state_nxt;
@@ -157,7 +158,7 @@ begin
         fifo_read_state_nxt <= FIFO_READY;
       when FIFO_READY =>
         if axi_lite_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
-          if send_nibble_state = CRET then
+          if send_nibble_state = CR then
             fifo_read_state_nxt <= FIFO_IDLE;
           end if;
         end if;
@@ -194,10 +195,10 @@ begin
                                              M_AXI_bvalid) is
   begin
     if axi_lite_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
-      if send_nibble_state = CRET then
-        send_nibble_state_nxt <= ZERO;
+      if send_nibble_state = CR then
+        send_nibble_state_nxt <= NUL1;
       else
-        send_nibble_state_nxt <= send_nibble_state - 1;
+        send_nibble_state_nxt <= send_nibble_state + 1;
       end if;
     else
       send_nibble_state_nxt <= send_nibble_state;
@@ -229,7 +230,7 @@ begin
         axi_lite_state_nxt <= AXI_WRITE_RESP;
       when AXI_WRITE_RESP =>
         if M_AXI_bvalid = '1' then
-          if send_nibble_state = CRET then
+          if send_nibble_state = CR then
             axi_lite_state_nxt <= AXI_IDLE;
           else
             axi_lite_state_nxt <= AXI_READ_REQ;
@@ -256,6 +257,8 @@ begin
       axi_arvalid <= '0';
       -- AXI Lite Read Data channel
       axi_rready <= '0';
+
+      fifo_tmp <= (others => '0');
     elsif rising_edge(clk) then
       case axi_lite_state is
         when AXI_IDLE =>
@@ -268,6 +271,11 @@ begin
           axi_arvalid <= '0';
           axi_rready <= '0';
         when AXI_READ_REQ =>
+          -- In this state, the read_fifo_state must be FIFO_READY
+          if send_nibble_state = NUL1 then
+            -- Only copy fifo_tmp once
+            fifo_tmp <= fifo_dreg;
+          end if;
           axi_araddr <= AXI_READ_STATUS_ADDR;
           axi_arvalid <= '1';
         when AXI_READ_DATA =>
@@ -280,21 +288,23 @@ begin
         when AXI_WRITE_REQ_DATA =>
           axi_awaddr <= AXI_WRITE_TXBUF_ADDR;
           axi_awvalid <= '1';
-          axi_wdata(DATA_WIDTH-1 downto 8) <= (others => '0');
+          axi_wdata(UART_DATA_WIDTH-1 downto 8) <= (others => '0');
+
           case send_nibble_state is
-            when ZERO => ascii := "00110000"; -- '0' (ASCII: 48)
-            when HEXX => ascii := "01111000"; -- 'x' (ASCII: 120)
-            when NIB7 => ascii := convert_to_ascii(fifo_dreg(31 downto 28));
-            when NIB6 => ascii := convert_to_ascii(fifo_dreg(27 downto 24));
-            when NIB5 => ascii := convert_to_ascii(fifo_dreg(23 downto 20));
-            when NIB4 => ascii := convert_to_ascii(fifo_dreg(19 downto 16));
-            when NIB3 => ascii := convert_to_ascii(fifo_dreg(15 downto 12));
-            when NIB2 => ascii := convert_to_ascii(fifo_dreg(11 downto 8));
-            when NIB1 => ascii := convert_to_ascii(fifo_dreg(7 downto 4));
-            when NIB0 => ascii := convert_to_ascii(fifo_dreg(3 downto 0));
-            when NEWL => ascii := "00001010"; -- LF (ASCII: 10)
-            -- send_nibble_state can now only be CRET
-            when others => ascii := "00001101"; -- CR (ASCII: 13)
+            when NUL1 => ascii := "00110000"; -- '0' (ASCII: 48)
+            when HEX1 => ascii := "01111000"; -- 'x' (ASCII: 120)
+            when SP   => ascii := "00100000"; -- ' ' (ASCII: 32)
+            when NUL2 => ascii := "00110000"; -- '0' (ASCII: 48)
+            when HEX2 => ascii := "01111000"; -- 'x' (ASCII: 120)
+            when LF   => ascii := "00001010"; -- LF (ASCII: 10)
+            when CR   => ascii := "00001101"; -- CR (ASCII: 13)
+            when others =>
+              ascii := convert_to_ascii(fifo_tmp(95 downto 92));
+              -- Left-shift fifo_tmp 4 bits
+              for k in fifo_tmp'high downto fifo_tmp'low+4 loop
+                fifo_tmp(k) <= fifo_tmp(k - 4);
+              end loop;
+              fifo_tmp(3 downto 0) <= (others => '0');
           end case;
           axi_wdata(7 downto 0) <= ascii;
 

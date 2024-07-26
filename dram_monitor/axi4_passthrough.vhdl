@@ -87,78 +87,30 @@ entity axi4_passthrough is
 
     -- FIFO ports, used for writing read request addresses
     fifo_full_i : in std_logic;
-    fifo_din_o  : out std_logic_vector(ADDR_WIDTH-1 downto 0);
+    fifo_din_o  : out std_logic_vector((ADDR_WIDTH+DATA_WIDTH+4)-1 downto 0);
     fifo_wren_o : out std_logic);
 end axi4_passthrough;
 
 architecture behaviour of axi4_passthrough is
 
-  signal awid    : std_logic_vector(3 downto 0);
-  signal awaddr  : std_logic_vector(ADDR_WIDTH-1 downto 0);
-  signal awlen   : std_logic_vector(7 downto 0);
-  signal awsize  : std_logic_vector(2 downto 0);
-  signal awburst : std_logic_vector(1 downto 0);
-  signal awlock  : std_logic_vector(0 downto 0);
-  signal awcache : std_logic_vector(3 downto 0);
-  signal awprot  : std_logic_vector(2 downto 0);
-  signal awqos   : std_logic_vector(3 downto 0);
-  signal awvalid : std_logic;
-
-  signal arid    : std_logic_vector(3 downto 0);
-  signal araddr  : std_logic_vector(ADDR_WIDTH-1 downto 0);
-  signal arlen   : std_logic_vector(7 downto 0);
-  signal arsize  : std_logic_vector(2 downto 0);
-  signal arburst : std_logic_vector(1 downto 0);
-  signal arlock  : std_logic_vector(0 downto 0);
-  signal arcache : std_logic_vector(3 downto 0);
-  signal arprot  : std_logic_vector(2 downto 0);
-  signal arqos   : std_logic_vector(3 downto 0);
-  signal arvalid : std_logic;
-
+  signal fifo_din  : std_logic_vector((ADDR_WIDTH+DATA_WIDTH+4)-1 downto 0);
   signal fifo_wren : std_logic;
 
 begin
-  -- -----------------------------
-  -- Write request channel
-  -- -----------------------------
-  aw_register_slice : process(aclk, aresetn) is
-  begin
-    if aresetn = '0' then
-      awid    <= (others => '0');
-      awaddr  <= (others => '0');
-      awlen   <= (others => '0');
-      awsize  <= (others => '0');
-      awburst <= (others => '0');
-      awlock  <= (others => '0');
-      awcache <= (others => '0');
-      awprot  <= (others => '0');
-      awqos   <= (others => '0');
-      awvalid <= '0';
-    elsif rising_edge(aclk) then
-      awid    <= S00_AXI_awid;
-      awaddr  <= S00_AXI_awaddr;
-      awlen   <= S00_AXI_awlen;
-      awsize  <= S00_AXI_awsize;
-      awburst <= S00_AXI_awburst;
-      awlock  <= S00_AXI_awlock;
-      awcache <= S00_AXI_awcache;
-      awprot  <= S00_AXI_awprot;
-      awqos   <= S00_AXI_awqos;
-      awvalid <= S00_AXI_awvalid;
-    end if;
-  end process aw_register_slice;
-
-  M00_AXI_awid    <= awid;
-  M00_AXI_awaddr  <= awaddr;
-  M00_AXI_awlen   <= awlen;
-  M00_AXI_awsize  <= awsize;
-  M00_AXI_awburst <= awburst;
-  M00_AXI_awlock  <= awlock;
-  M00_AXI_awcache <= awcache;
-  M00_AXI_awprot  <= awprot;
-  M00_AXI_awqos   <= awqos;
+  -- -- -----------------------------
+  -- -- Write request channel
+  -- -- -----------------------------
+  M00_AXI_awid    <= S00_AXI_awid;
+  M00_AXI_awaddr  <= S00_AXI_awaddr;
+  M00_AXI_awlen   <= S00_AXI_awlen;
+  M00_AXI_awsize  <= S00_AXI_awsize;
+  M00_AXI_awburst <= S00_AXI_awburst;
+  M00_AXI_awlock  <= S00_AXI_awlock;
+  M00_AXI_awcache <= S00_AXI_awcache;
+  M00_AXI_awprot  <= S00_AXI_awprot;
+  M00_AXI_awqos   <= S00_AXI_awqos;
   -- Handshake
-  M00_AXI_awvalid <= awvalid;
+  M00_AXI_awvalid <= S00_AXI_awvalid;
   S00_AXI_awready <= M00_AXI_awready;
 
 
@@ -183,67 +135,21 @@ begin
   M00_AXI_bready <= S00_AXI_bready;
 
 
-  -- -----------------------------
-  -- Read request channel
-  -- -----------------------------
-  ar_register_slice : process(aclk, aresetn) is
-  begin
-    if aresetn = '0' then
-      arid    <= (others => '0');
-      araddr  <= (others => '0');
-      arlen   <= (others => '0');
-      arsize  <= (others => '0');
-      arburst <= (others => '0');
-      arlock  <= (others => '0');
-      arcache <= (others => '0');
-      arprot  <= (others => '0');
-      arqos   <= (others => '0');
-      arvalid <= '0';
-    elsif rising_edge(aclk) then
-      arid    <= S00_AXI_arid;
-      araddr  <= S00_AXI_araddr;
-      arlen   <= S00_AXI_arlen;
-      arsize  <= S00_AXI_arsize;
-      arburst <= S00_AXI_arburst;
-      arlock  <= S00_AXI_arlock;
-      arcache <= S00_AXI_arcache;
-      arprot  <= S00_AXI_arprot;
-      arqos   <= S00_AXI_arqos;
-      arvalid <= S00_AXI_arvalid;
-    end if;
-  end process ar_register_slice;
-
-  M00_AXI_arid    <= arid;
-  M00_AXI_araddr  <= araddr;
-  M00_AXI_arlen   <= arlen;
-  M00_AXI_arsize  <= arsize;
-  M00_AXI_arburst <= arburst;
-  M00_AXI_arlock  <= arlock;
-  M00_AXI_arcache <= arcache;
-  M00_AXI_arprot  <= arprot;
-  M00_AXI_arqos   <= arqos;
+  -- -- -----------------------------
+  -- -- Read request channel
+  -- -- -----------------------------
+  M00_AXI_arid    <= S00_AXI_arid;
+  M00_AXI_araddr  <= S00_AXI_araddr;
+  M00_AXI_arlen   <= S00_AXI_arlen;
+  M00_AXI_arsize  <= S00_AXI_arsize;
+  M00_AXI_arburst <= S00_AXI_arburst;
+  M00_AXI_arlock  <= S00_AXI_arlock;
+  M00_AXI_arcache <= S00_AXI_arcache;
+  M00_AXI_arprot  <= S00_AXI_arprot;
+  M00_AXI_arqos   <= S00_AXI_arqos;
   -- Handshake
-  M00_AXI_arvalid <= arvalid;
+  M00_AXI_arvalid <= S00_AXI_arvalid;
   S00_AXI_arready <= M00_AXI_arready;
-
-  fifo_din_o <= araddr;
-  fifo_wren_o <= fifo_wren;
-  ar_fifo_in : process(aclk, aresetn) is
-  begin
-    if aresetn = '0' then
-      fifo_wren <= '0';
-    elsif rising_edge(aclk) then
-      if fifo_wren = '0' then
-        if S00_AXI_arvalid = '1' and M00_AXI_arready = '1' then
-          if fifo_full_i = '0' then
-            fifo_wren <= '1';
-          end if;
-        end if;
-      else
-        fifo_wren <= '0';
-      end if;
-    end if;
-  end process ar_fifo_in;
 
 
   -- -----------------------------
@@ -256,5 +162,43 @@ begin
   -- Handshake
   S00_AXI_rvalid <= M00_AXI_rvalid;
   M00_AXI_rready <= S00_AXI_rready;
+
+
+  -- Register to FIFO output signals
+  fifo_din_o <= fifo_din;
+  fifo_wren_o <= fifo_wren;
+
+  enable_fifo : process(aclk, aresetn) is
+  begin
+    if aresetn = '0' then
+      fifo_wren <= '0';
+    elsif rising_edge(aclk) then
+      if fifo_wren = '0' and fifo_full_i = '0' then
+        if M00_AXI_rvalid = '1' and S00_AXI_rready = '1' then
+          fifo_wren <= '1';
+        end if;
+      else
+        fifo_wren <= '0';
+      end if;
+    end if;
+  end process enable_fifo;
+
+
+  read_araddr_rdata : process(aclk, aresetn) is
+  begin
+    if aresetn = '0' then
+      fifo_din <= (others => '0');
+    elsif rising_edge(aclk) then
+      if S00_AXI_arvalid = '1' and M00_AXI_arready = '1' then
+        fifo_din((ADDR_WIDTH+DATA_WIDTH+4)-1 downto ADDR_WIDTH+DATA_WIDTH) <= S00_AXI_arid;
+        fifo_din((ADDR_WIDTH+DATA_WIDTH)-1 downto DATA_WIDTH) <= S00_AXI_araddr;
+      end if;
+
+      if M00_AXI_rvalid = '1' and S00_AXI_rready = '1' then
+        fifo_din(DATA_WIDTH-1 downto 0) <= M00_AXI_rdata;
+      end if;
+    end if;
+  end process read_araddr_rdata;
+
 
 end architecture behaviour;
