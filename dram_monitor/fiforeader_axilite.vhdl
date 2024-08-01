@@ -6,7 +6,7 @@ entity fiforeader_axilite is
   generic (
     UART_ADDR_WIDTH : integer := 16;
     UART_DATA_WIDTH : integer := 32;
-    FIFO_DATA_WIDTH : integer := 100);
+    FIFO_DATA_WIDTH : integer := 180);
   port (
     clk   : in std_logic;
     rst_n : in std_logic;
@@ -85,21 +85,33 @@ architecture behaviour of fiforeader_axilite is
 
   -- The data will be sent to the terminal by 4 bits per transfer,
   -- because we want to print them as hexademicals encoded with
-  -- ascii characters. Each address is 32 bits wide, data 64 bits.
-  -- Including some print characters we need 31 states.
-  --
-  -- This will be printed per line: 0x<32bits> 0x<64bits>LFCR
-  constant NIBBLE_STATE_LEN    : integer := 5;
+  -- ascii characters.
+  -- Including some print characters we need 61 states.
+  constant NIBBLE_STATE_LEN    : integer := 6;
   signal send_nibble_state     : unsigned(NIBBLE_STATE_LEN-1 downto 0);
   signal send_nibble_state_nxt : unsigned(NIBBLE_STATE_LEN-1 downto 0);
   -- Some named constants at fixed positions to be printed
-  constant NUL1 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "00000";
-  constant HEX1 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "00001";
-  constant SP   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "01010";
-  constant NUL2 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "01011";
-  constant HEX2 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "01100";
-  constant LF   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "11101";
-  constant CR   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "11110";
+  constant NUL1 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "000000"; -- 0
+  constant HEX1 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "000001"; -- 1
+  -- event number (16 bits, nibbles 2 - 5)
+  constant SP1  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "000110"; -- 6
+  constant NUL2 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "000111"; -- 7
+  constant HEX2 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "001000"; -- 8
+  -- cycle count (64 bits, nibbles 9 - 24)
+  constant SP2  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "011001"; -- 25
+  constant NUL3 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "011010"; -- 26
+  constant HEX3 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "011011"; -- 27
+  -- arid (4 bits, nibble 28)
+  constant SP3  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "011101"; -- 29
+  constant NUL4 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "011110"; -- 30
+  constant HEX4 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "011111"; -- 31
+  -- request address (32 bits, nibbles 31-39)
+  constant SP4  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "101000"; -- 40
+  constant NUL5 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "101001"; -- 41
+  constant HEX5 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "101010"; -- 42
+  -- data (64 bits, nibbles 43-58)
+  constant LF   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "111011"; -- 59
+  constant CR   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "111100"; -- 60
 
   --
   -- AXI Lite signals
@@ -291,15 +303,18 @@ begin
           axi_wdata(UART_DATA_WIDTH-1 downto 8) <= (others => '0');
 
           case send_nibble_state is
-            when NUL1 => ascii := "00110000"; -- '0' (ASCII: 48)
-            when HEX1 => ascii := "01111000"; -- 'x' (ASCII: 120)
-            when SP   => ascii := "00100000"; -- ' ' (ASCII: 32)
-            when NUL2 => ascii := "00110000"; -- '0' (ASCII: 48)
-            when HEX2 => ascii := "01111000"; -- 'x' (ASCII: 120)
-            when LF   => ascii := "00001010"; -- LF (ASCII: 10)
-            when CR   => ascii := "00001101"; -- CR (ASCII: 13)
+            when NUL1 | NUL2 | NUL3 | NUL4 | NUL5 =>
+              ascii := "00110000"; -- '0' (ASCII: 48)
+            when HEX1 | HEX2 | HEX3 | HEX4 | HEX5 =>
+              ascii := "01111000"; -- 'x' (ASCII: 120)
+            when SP1 | SP2 | SP3 | SP4   =>
+              ascii := "00100000"; -- ' ' (ASCII: 32)
+            when LF   =>
+              ascii := "00001010"; -- LF (ASCII: 10)
+            when CR   =>
+              ascii := "00001101"; -- CR (ASCII: 13)
             when others =>
-              ascii := convert_to_ascii(fifo_tmp(95 downto 92));
+              ascii := convert_to_ascii(fifo_tmp(179 downto 176));
               -- Left-shift fifo_tmp 4 bits
               for k in fifo_tmp'high downto fifo_tmp'low+4 loop
                 fifo_tmp(k) <= fifo_tmp(k - 4);

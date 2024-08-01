@@ -17,7 +17,8 @@ create_bd_cell -type ip -vlnv xilinx.com:ip:fifo_generator:13.2 DDR/fifo_generat
 endgroup
 set_property -dict [list \
   CONFIG.Fifo_Implementation {Common_Clock_Builtin_FIFO} \
-  CONFIG.Input_Data_Width {100} \
+  CONFIG.Input_Depth {65536} \
+  CONFIG.Input_Data_Width {180} \
 ] [get_bd_cells DDR/fifo_generator_0]
 connect_bd_net [get_bd_pins DDR/fifo_generator_0/full] [get_bd_pins DDR/axi4_passthrough_0/fifo_full_i]
 connect_bd_net [get_bd_pins DDR/axi4_passthrough_0/fifo_wren_o] [get_bd_pins DDR/fifo_generator_0/wr_en]

@@ -4,8 +4,10 @@ use ieee.numeric_std.all;
 
 entity axi4_passthrough is
   generic (
-    ADDR_WIDTH : integer := 32;
-    DATA_WIDTH : integer := 64);
+    ADDR_WIDTH    : integer := 32;
+    DATA_WIDTH    : integer := 64;
+    COUNTER_WIDTH : integer := 64;
+    EVENTNR_WIDTH : integer := 16);
   port (
     aclk            : in std_logic;
     aresetn         : in std_logic;
@@ -87,14 +89,23 @@ entity axi4_passthrough is
 
     -- FIFO ports, used for writing read request addresses
     fifo_full_i : in std_logic;
-    fifo_din_o  : out std_logic_vector((ADDR_WIDTH+DATA_WIDTH+4)-1 downto 0);
+    fifo_din_o  : out std_logic_vector((ADDR_WIDTH +
+                                        DATA_WIDTH +
+                                        COUNTER_WIDTH +
+                                        EVENTNR_WIDTH + 4)-1 downto 0);
     fifo_wren_o : out std_logic);
 end axi4_passthrough;
 
 architecture behaviour of axi4_passthrough is
 
-  signal fifo_din  : std_logic_vector((ADDR_WIDTH+DATA_WIDTH+4)-1 downto 0);
+  signal fifo_din  : std_logic_vector((ADDR_WIDTH +
+                                       DATA_WIDTH +
+                                       COUNTER_WIDTH +
+                                       EVENTNR_WIDTH + 4)-1 downto 0);
   signal fifo_wren : std_logic;
+
+  signal cycle_count : unsigned(COUNTER_WIDTH-1 downto 0);
+  signal event_count : unsigned(EVENTNR_WIDTH-1 downto 0);
 
 begin
   -- -- -----------------------------
@@ -175,7 +186,9 @@ begin
     elsif rising_edge(aclk) then
       if fifo_wren = '0' and fifo_full_i = '0' then
         if M00_AXI_rvalid = '1' and S00_AXI_rready = '1' then
-          fifo_wren <= '1';
+          if S00_AXI_awsize = "011" and S00_AXI_awlen = "00000111" then
+            fifo_wren <= '1';
+          end if;
         end if;
       else
         fifo_wren <= '0';
@@ -188,10 +201,38 @@ begin
   begin
     if aresetn = '0' then
       fifo_din <= (others => '0');
+      cycle_count <= (others => '0');
+      event_count <= (0 => '1', others => '0');
     elsif rising_edge(aclk) then
+      cycle_count <= cycle_count + 1;
+
       if S00_AXI_arvalid = '1' and M00_AXI_arready = '1' then
-        fifo_din((ADDR_WIDTH+DATA_WIDTH+4)-1 downto ADDR_WIDTH+DATA_WIDTH) <= S00_AXI_arid;
-        fifo_din((ADDR_WIDTH+DATA_WIDTH)-1 downto DATA_WIDTH) <= S00_AXI_araddr;
+        event_count <= event_count + 1;
+        -- --
+        -- Read request accepted, this is the start of the transfer
+        --
+        -- Save the event number
+        fifo_din((ADDR_WIDTH +
+                  DATA_WIDTH +
+                  COUNTER_WIDTH +
+                  EVENTNR_WIDTH + 4) - 1 downto
+                 (ADDR_WIDTH +
+                  DATA_WIDTH +
+                  COUNTER_WIDTH + 4)) <= std_logic_vector(event_count);
+        -- Save the number of cycles spent up until now
+        fifo_din((ADDR_WIDTH +
+                  DATA_WIDTH +
+                  COUNTER_WIDTH + 4) - 1 downto
+                 (ADDR_WIDTH +
+                  DATA_WIDTH + 4)) <= std_logic_vector(cycle_count);
+        -- Save the arid (transaction identifier of the read request)
+        fifo_din((ADDR_WIDTH +
+                  DATA_WIDTH + 4) - 1 downto
+                 (ADDR_WIDTH +
+                  DATA_WIDTH)) <= S00_AXI_arid;
+        -- Save the araddr (request read address)
+        fifo_din((ADDR_WIDTH +
+                  DATA_WIDTH) - 1 downto DATA_WIDTH) <= S00_AXI_araddr;
       end if;
 
       if M00_AXI_rvalid = '1' and S00_AXI_rready = '1' then
