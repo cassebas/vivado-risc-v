@@ -97,21 +97,25 @@ architecture behaviour of fiforeader_axilite is
   constant SP1  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "000110"; -- 6
   constant NUL2 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "000111"; -- 7
   constant HEX2 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "001000"; -- 8
-  -- cycle count (64 bits, nibbles 9 - 24)
-  constant SP2  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "011001"; -- 25
-  constant NUL3 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "011010"; -- 26
-  constant HEX3 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "011011"; -- 27
-  -- arid (4 bits, nibble 28)
-  constant SP3  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "011101"; -- 29
-  constant NUL4 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "011110"; -- 30
-  constant HEX4 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "011111"; -- 31
-  -- request address (32 bits, nibbles 31-39)
-  constant SP4  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "101000"; -- 40
-  constant NUL5 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "101001"; -- 41
-  constant HEX5 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "101010"; -- 42
-  -- data (64 bits, nibbles 43-58)
-  constant LF   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "111011"; -- 59
-  constant CR   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "111100"; -- 60
+  -- cycle count at memory request (32 bits, nibbles 9 - 16)
+  constant SP2  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "010001"; -- 17
+  constant NUL3 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "010010"; -- 18
+  constant HEX3 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "010011"; -- 19
+  -- cycle count at returning data (32 bits, nibbles 20 - 27)
+  constant SP3  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "011100"; -- 28
+  constant NUL4 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "011101"; -- 29
+  constant HEX4 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "011110"; -- 30
+  -- arid (4 bits, nibble 31)
+  constant SP4  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "100000"; -- 32
+  constant NUL5 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "100001"; -- 33
+  constant HEX5 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "100010"; -- 34
+  -- request address (32 bits, nibbles 35-42)
+  constant SP5  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "101011"; -- 43
+  constant NUL6 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "101100"; -- 44
+  constant HEX6 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "101101"; -- 45
+  -- data (64 bits, nibbles 46-61)
+  constant LF   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "111110"; -- 62
+  constant CR   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "111111"; -- 63
 
   --
   -- AXI Lite signals
@@ -303,11 +307,11 @@ begin
           axi_wdata(UART_DATA_WIDTH-1 downto 8) <= (others => '0');
 
           case send_nibble_state is
-            when NUL1 | NUL2 | NUL3 | NUL4 | NUL5 =>
+            when NUL1 | NUL2 | NUL3 | NUL4 | NUL5 | NUL6 =>
               ascii := "00110000"; -- '0' (ASCII: 48)
-            when HEX1 | HEX2 | HEX3 | HEX4 | HEX5 =>
+            when HEX1 | HEX2 | HEX3 | HEX4 | HEX5 |HEX6 =>
               ascii := "01111000"; -- 'x' (ASCII: 120)
-            when SP1 | SP2 | SP3 | SP4   =>
+            when SP1 | SP2 | SP3 | SP4 | SP5  =>
               ascii := "00100000"; -- ' ' (ASCII: 32)
             when LF   =>
               ascii := "00001010"; -- LF (ASCII: 10)

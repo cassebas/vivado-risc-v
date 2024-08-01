@@ -6,7 +6,7 @@ entity axi4_passthrough is
   generic (
     ADDR_WIDTH    : integer := 32;
     DATA_WIDTH    : integer := 64;
-    COUNTER_WIDTH : integer := 64;
+    COUNTER_WIDTH : integer := 32;
     EVENTNR_WIDTH : integer := 16);
   port (
     aclk            : in std_logic;
@@ -91,7 +91,7 @@ entity axi4_passthrough is
     fifo_full_i : in std_logic;
     fifo_din_o  : out std_logic_vector((ADDR_WIDTH +
                                         DATA_WIDTH +
-                                        COUNTER_WIDTH +
+                                        COUNTER_WIDTH*2 +
                                         EVENTNR_WIDTH + 4)-1 downto 0);
     fifo_wren_o : out std_logic);
 end axi4_passthrough;
@@ -100,7 +100,7 @@ architecture behaviour of axi4_passthrough is
 
   signal fifo_din  : std_logic_vector((ADDR_WIDTH +
                                        DATA_WIDTH +
-                                       COUNTER_WIDTH +
+                                       COUNTER_WIDTH*2 +
                                        EVENTNR_WIDTH + 4)-1 downto 0);
   signal fifo_wren : std_logic;
 
@@ -214,17 +214,18 @@ begin
         -- Save the event number
         fifo_din((ADDR_WIDTH +
                   DATA_WIDTH +
-                  COUNTER_WIDTH +
+                  COUNTER_WIDTH*2 +
                   EVENTNR_WIDTH + 4) - 1 downto
                  (ADDR_WIDTH +
                   DATA_WIDTH +
-                  COUNTER_WIDTH + 4)) <= std_logic_vector(event_count);
+                  COUNTER_WIDTH*2 + 4)) <= std_logic_vector(event_count);
         -- Save the number of cycles spent up until now
         fifo_din((ADDR_WIDTH +
                   DATA_WIDTH +
-                  COUNTER_WIDTH + 4) - 1 downto
+                  COUNTER_WIDTH*2 + 4) - 1 downto
                  (ADDR_WIDTH +
-                  DATA_WIDTH + 4)) <= std_logic_vector(cycle_count);
+                  DATA_WIDTH +
+                  COUNTER_WIDTH + 4)) <= std_logic_vector(cycle_count);
         -- Save the arid (transaction identifier of the read request)
         fifo_din((ADDR_WIDTH +
                   DATA_WIDTH + 4) - 1 downto
@@ -235,7 +236,18 @@ begin
                   DATA_WIDTH) - 1 downto DATA_WIDTH) <= S00_AXI_araddr;
       end if;
 
+      --
+      -- Answer from DRAM memory
+      --
       if M00_AXI_rvalid = '1' and S00_AXI_rready = '1' then
+        -- Save the number of cycles spent up until now
+        fifo_din((ADDR_WIDTH +
+                  DATA_WIDTH +
+                  COUNTER_WIDTH + 4) - 1 downto
+                 (ADDR_WIDTH +
+                  DATA_WIDTH + 4)) <= std_logic_vector(cycle_count);
+
+        -- Save the rdata (the data from memory)
         fifo_din(DATA_WIDTH-1 downto 0) <= M00_AXI_rdata;
       end if;
     end if;
