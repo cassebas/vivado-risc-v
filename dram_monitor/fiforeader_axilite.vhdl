@@ -200,7 +200,7 @@ begin
     if rst_n = '0' then
       fifo_dreg <= (others => '0');
     elsif rising_edge(clk) then
-      if fifo_read_state = FIFO_ENABLE then
+      if fifo_read_state = FIFO_READY then
         fifo_dreg <= fifo_dout_i;
       end if;
     end if;
