@@ -398,17 +398,3 @@ jtag-boot: $(bitstream) linux-stable/arch/riscv/boot/Image debian-riscv64/ramdis
 
 vivado-gui: $(proj_time)
 	vivado $(proj_file)
-
-
-HW_DEVICE ?= xc7k325t_0
-BENCHMARK_CONFIG ?= rv32_i4k_d4k
-BITSTREAM_DIR    = vivado-genesys2-riscv/genesys2-riscv.runs/impl_1
-BITSTREAM_FILE   = riscv_wrapper.bit
-BITSTREAM        ?= workspace/$(BENCHMARK_CONFIG)/$(BITSTREAM_DIR)/$(BITSTREAM_FILE)
-
-.PHONY: program_device
-program_device:
-	@echo "Programming configuration $(BENCHMARK_CONFIG) into the FPGA $(HW_DEVICE)"
-	env BITSTREAM=$(BITSTREAM) HW_DEVICE=$(HW_DEVICE) \
-	 	$(vivado) -source program_device.tcl
-	@echo "Done"
