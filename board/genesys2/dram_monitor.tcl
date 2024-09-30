@@ -1,10 +1,10 @@
 open_project workspace/rocket32s1/vivado-genesys2-riscv/genesys2-riscv.xpr
 update_compile_order -fileset sources_1
-open_bd_design {/home/caspar/local/git/vivado-risc-v/workspace/rocket32s1/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/bd/riscv/riscv.bd}
-add_files -norecurse /home/caspar/local/git/vivado-risc-v/dram_monitor/axi4_passthrough.vhdl
-add_files -norecurse /home/caspar/local/git/vivado-risc-v/dram_monitor/fiforeader_axilite.vhdl
-add_files -fileset constrs_1 -norecurse /home/caspar/local/git/vivado-risc-v/board/genesys2/uart_extra.xdc
-add_files -fileset constrs_1 -norecurse /home/caspar/local/git/vivado-risc-v/board/genesys2/leds.xdc
+open_bd_design workspace/rocket32s1/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/bd/riscv/riscv.bd
+add_files -norecurse dram_monitor/axi4_passthrough.vhdl
+add_files -norecurse dram_monitor/fiforeader_axilite.vhdl
+add_files -fileset constrs_1 -norecurse board/genesys2/uart_extra.xdc
+add_files -fileset constrs_1 -norecurse board/genesys2/leds.xdc
 update_compile_order -fileset sources_1
 create_bd_cell -type module -reference axi4_passthrough DDR/axi4_passthrough_0
 delete_bd_objs [get_bd_intf_nets DDR/MEM_AXI4]
