@@ -20,3 +20,4 @@ src/main/scala/rocket_generated_cacheconfigs.scala
 /.ivy2/
 /.sbt/
 /.Xilinx/
+src/main/scala/rv32_cache_configs.scala
