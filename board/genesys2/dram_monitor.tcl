@@ -1,6 +1,9 @@
-open_project workspace/rocket32s1/vivado-genesys2-riscv/genesys2-riscv.xpr
+set core_config $::env(CONFIG)
+puts "dram_monitor.tcl: using core configuration ${core_config}"
+
+open_project workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.xpr
 update_compile_order -fileset sources_1
-open_bd_design workspace/rocket32s1/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/bd/riscv/riscv.bd
+open_bd_design workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/bd/riscv/riscv.bd
 add_files -norecurse dram_monitor/axi4_passthrough.vhdl
 add_files -norecurse dram_monitor/fiforeader_axilite.vhdl
 add_files -fileset constrs_1 -norecurse board/genesys2/uart_extra.xdc
