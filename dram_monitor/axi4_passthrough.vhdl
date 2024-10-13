@@ -184,14 +184,18 @@ begin
     if aresetn = '0' then
       fifo_wren <= '0';
     elsif rising_edge(aclk) then
-      if fifo_wren = '0' and fifo_full_i = '0' then
-        if M00_AXI_rvalid = '1' and S00_AXI_rready = '1' then
-          if S00_AXI_awsize = "011" and S00_AXI_awlen = "00000111" then
-            fifo_wren <= '1';
+      if S00_AXI_arid = x"2" then
+        if fifo_wren = '0' and fifo_full_i = '0' then
+          if M00_AXI_rvalid = '1' and S00_AXI_rready = '1' then
+            -- S00_AXI_arsize should be 011 for 8 bytes per transfer
+            -- S00_AXI_arlen should be 111 for 7+1=8 transfers per burst
+            if S00_AXI_arsize = "011" and S00_AXI_arlen = "00000111" then
+              fifo_wren <= '1';
+            end if;
           end if;
+        else
+          fifo_wren <= '0';
         end if;
-      else
-        fifo_wren <= '0';
       end if;
     end if;
   end process enable_fifo;
@@ -206,49 +210,51 @@ begin
     elsif rising_edge(aclk) then
       cycle_count <= cycle_count + 1;
 
-      if S00_AXI_arvalid = '1' and M00_AXI_arready = '1' then
-        event_count <= event_count + 1;
-        -- --
-        -- Read request accepted, this is the start of the transfer
+      if S00_AXI_arid = x"2" then
+        if S00_AXI_arvalid = '1' and M00_AXI_arready = '1' then
+          event_count <= event_count + 1;
+          -- --
+          -- Read request accepted, this is the start of the transfer
+          --
+          -- Save the event number
+          fifo_din((ADDR_WIDTH +
+                    DATA_WIDTH +
+                    COUNTER_WIDTH*2 +
+                    EVENTNR_WIDTH + 4) - 1 downto
+                   (ADDR_WIDTH +
+                    DATA_WIDTH +
+                    COUNTER_WIDTH*2 + 4)) <= std_logic_vector(event_count);
+          -- Save the number of cycles spent up until now
+          fifo_din((ADDR_WIDTH +
+                    DATA_WIDTH +
+                    COUNTER_WIDTH*2 + 4) - 1 downto
+                   (ADDR_WIDTH +
+                    DATA_WIDTH +
+                    COUNTER_WIDTH + 4)) <= std_logic_vector(cycle_count);
+          -- Save the arid (transaction identifier of the read request)
+          fifo_din((ADDR_WIDTH +
+                    DATA_WIDTH + 4) - 1 downto
+                   (ADDR_WIDTH +
+                    DATA_WIDTH)) <= S00_AXI_arid;
+          -- Save the araddr (request read address)
+          fifo_din((ADDR_WIDTH +
+                    DATA_WIDTH) - 1 downto DATA_WIDTH) <= S00_AXI_araddr;
+        end if;
+
         --
-        -- Save the event number
-        fifo_din((ADDR_WIDTH +
-                  DATA_WIDTH +
-                  COUNTER_WIDTH*2 +
-                  EVENTNR_WIDTH + 4) - 1 downto
-                 (ADDR_WIDTH +
-                  DATA_WIDTH +
-                  COUNTER_WIDTH*2 + 4)) <= std_logic_vector(event_count);
-        -- Save the number of cycles spent up until now
-        fifo_din((ADDR_WIDTH +
-                  DATA_WIDTH +
-                  COUNTER_WIDTH*2 + 4) - 1 downto
-                 (ADDR_WIDTH +
-                  DATA_WIDTH +
-                  COUNTER_WIDTH + 4)) <= std_logic_vector(cycle_count);
-        -- Save the arid (transaction identifier of the read request)
-        fifo_din((ADDR_WIDTH +
-                  DATA_WIDTH + 4) - 1 downto
-                 (ADDR_WIDTH +
-                  DATA_WIDTH)) <= S00_AXI_arid;
-        -- Save the araddr (request read address)
-        fifo_din((ADDR_WIDTH +
-                  DATA_WIDTH) - 1 downto DATA_WIDTH) <= S00_AXI_araddr;
-      end if;
+        -- Answer from DRAM memory
+        --
+        if M00_AXI_rvalid = '1' and S00_AXI_rready = '1' then
+          -- Save the number of cycles spent up until now
+          fifo_din((ADDR_WIDTH +
+                    DATA_WIDTH +
+                    COUNTER_WIDTH + 4) - 1 downto
+                   (ADDR_WIDTH +
+                    DATA_WIDTH + 4)) <= std_logic_vector(cycle_count);
 
-      --
-      -- Answer from DRAM memory
-      --
-      if M00_AXI_rvalid = '1' and S00_AXI_rready = '1' then
-        -- Save the number of cycles spent up until now
-        fifo_din((ADDR_WIDTH +
-                  DATA_WIDTH +
-                  COUNTER_WIDTH + 4) - 1 downto
-                 (ADDR_WIDTH +
-                  DATA_WIDTH + 4)) <= std_logic_vector(cycle_count);
-
-        -- Save the rdata (the data from memory)
-        fifo_din(DATA_WIDTH-1 downto 0) <= M00_AXI_rdata;
+          -- Save the rdata (the data from memory)
+          fifo_din(DATA_WIDTH-1 downto 0) <= M00_AXI_rdata;
+        end if;
       end if;
     end if;
   end process read_araddr_rdata;
