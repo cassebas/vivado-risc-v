@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 
 entity fiforeader_axilite is
   generic (
+    ADDR_WIDTH      : integer := 32;
     UART_ADDR_WIDTH : integer := 16;
     UART_DATA_WIDTH : integer := 32;
     FIFO_DATA_WIDTH : integer := 180);
@@ -12,6 +13,9 @@ entity fiforeader_axilite is
     rst_n : in std_logic;
     -- DEBUG leds
     leds : out std_logic_vector(7 downto 0);
+    -- Addresses to monitor in the AXI traffic
+    axi4_addr1_o : out std_logic_vector(ADDR_WIDTH-1 downto 0);
+    axi4_addr2_o : out std_logic_vector(ADDR_WIDTH-1 downto 0);
     -- FIFO ports
     fifo_empty_i : in std_logic;
     fifo_dout_i  : in std_logic_vector(FIFO_DATA_WIDTH-1 downto 0);
@@ -43,6 +47,9 @@ entity fiforeader_axilite is
 end fiforeader_axilite;
 
 architecture behaviour of fiforeader_axilite is
+
+  constant addr1_monitor : std_logic_vector(ADDR_WIDTH-1 downto 0) := x"00001180";
+  constant addr2_monitor : std_logic_vector(ADDR_WIDTH-1 downto 0) := x"00001100";
 
   function convert_to_ascii(nibble : std_logic_vector(3 downto 0))
     return std_logic_vector is
@@ -357,5 +364,10 @@ begin
   M_AXI_arvalid <= axi_arvalid;
   -- AXI Lite Read Data channel
   M_AXI_rready <= axi_rready;
+
+  -- For now put hard coded constants on the output for
+  -- monitoring specific addresses in the AXI traffic
+  axi4_addr1_o <= addr1_monitor;
+  axi4_addr2_o <= addr2_monitor;
 
 end architecture behaviour;

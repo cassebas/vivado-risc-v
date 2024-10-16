@@ -32,6 +32,8 @@ create_bd_cell -type module -reference fiforeader_axilite DDR/fiforeader_axilite
 connect_bd_net [get_bd_pins DDR/fifo_generator_0/empty] [get_bd_pins DDR/fiforeader_axilite_0/fifo_empty_i]
 connect_bd_net [get_bd_pins DDR/fifo_generator_0/dout] [get_bd_pins DDR/fiforeader_axilite_0/fifo_dout_i]
 connect_bd_net [get_bd_pins DDR/fiforeader_axilite_0/fifo_rden_o] [get_bd_pins DDR/fifo_generator_0/rd_en]
+connect_bd_net [get_bd_pins DDR/fiforeader_axilite_0/axi4_addr1_o] [get_bd_pins DDR/axi4_passthrough_0/addr1_monitor_i]
+connect_bd_net [get_bd_pins DDR/fiforeader_axilite_0/axi4_addr2_o] [get_bd_pins DDR/axi4_passthrough_0/addr2_monitor_i]
 connect_bd_net [get_bd_pins DDR/axi_reset] [get_bd_pins DDR/fiforeader_axilite_0/rst_n]
 connect_bd_net [get_bd_pins DDR/axi_clock] [get_bd_pins DDR/fiforeader_axilite_0/clk]
 create_bd_cell -type module -reference uart DDR/uart_0
