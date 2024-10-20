@@ -48,9 +48,6 @@ end fiforeader_axilite;
 
 architecture behaviour of fiforeader_axilite is
 
-  constant addr1_monitor : std_logic_vector(ADDR_WIDTH-1 downto 0) := x"00001180";
-  constant addr2_monitor : std_logic_vector(ADDR_WIDTH-1 downto 0) := x"00001100";
-
   function convert_to_ascii(nibble : std_logic_vector(3 downto 0))
     return std_logic_vector is
   begin
@@ -82,6 +79,13 @@ architecture behaviour of fiforeader_axilite is
                                 FIFO_ENABLE,
                                 FIFO_READY);
   signal fifo_read_state, fifo_read_state_nxt : fifo_read_state_type;
+
+  type readwrite_state_type is (READ_RX, IDLE, WRITE_TX);
+  signal readwrite_state, readwrite_state_nxt : readwrite_state_type;
+
+  -- This signal indicates whether a read of M_AXI_rdata is the status
+  -- register or the rx buffer
+  signal read_status_reg, read_status_reg_nxt : std_logic;
 
   type axi_lite_state_type is (AXI_IDLE,
                                AXI_READ_REQ,
@@ -125,6 +129,21 @@ architecture behaviour of fiforeader_axilite is
   constant CR   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "111111"; -- 63
 
   --
+  -- Determination of the addresses that must be monitored by AXI passthrough
+  --
+  -- Default values for the addresses to monitor by the AXI passthrough
+  constant addr1_def : std_logic_vector(ADDR_WIDTH-1 downto 0) := x"00001180";
+  constant addr2_def : std_logic_vector(ADDR_WIDTH-1 downto 0) := x"00001100";
+  signal addr_reg : std_logic_vector((ADDR_WIDTH*2)-1 downto 0);
+  signal addr_tmp : std_logic_vector((ADDR_WIDTH*2)-1 downto 0);
+  signal addr_tmp_ready : std_logic;
+
+  -- For counting the received bytes we will need 3 bits, because a
+  -- maximum of 8 bytes will be received. (Representing two 32-bit addresses.)
+  signal rx_bytecnt_state, rx_bytecnt_state_nxt : unsigned(2 downto 0);
+  constant RX_B0 : unsigned(2 downto 0) := "000";
+  constant RX_B7 : unsigned(2 downto 0) := "111";
+  --
   -- AXI Lite signals
   --
   -- AXI Lite Write Request channel
@@ -158,17 +177,23 @@ begin
   begin
     if rst_n = '0' then
       fifo_read_state <= FIFO_IDLE;
+      readwrite_state <= READ_RX;
+      read_status_reg <= '1';
+      rx_bytecnt_state <= RX_B0;
       send_nibble_state <= NUL1;
       axi_lite_state <= AXI_IDLE;
     elsif rising_edge(clk) then
       fifo_read_state <= fifo_read_state_nxt;
+      readwrite_state <= readwrite_state_nxt;
+      read_status_reg <= read_status_reg_nxt;
+      rx_bytecnt_state <= rx_bytecnt_state_nxt;
       send_nibble_state <= send_nibble_state_nxt;
       axi_lite_state <= axi_lite_state_nxt;
     end if;
   end process statemachine_register;
 
 
-  read_fifo_statemachine_decoder : process(fifo_read_state, send_nibble_state,
+  fifo_read_statemachine_decoder : process(fifo_read_state, send_nibble_state,
                                            axi_lite_state, fifo_empty_i) is
   begin
     fifo_read_state_nxt <= fifo_read_state;
@@ -186,10 +211,10 @@ begin
           end if;
         end if;
     end case;
-  end process read_fifo_statemachine_decoder;
+  end process fifo_read_statemachine_decoder;
 
 
-  read_fifo_output_decoder : process(fifo_read_state) is
+  fifo_read_output_decoder : process(fifo_read_state) is
   begin
     case fifo_read_state is
       when FIFO_IDLE =>
@@ -199,10 +224,10 @@ begin
       when FIFO_READY =>
         fifo_rden_o <= '0';
     end case;
-  end process read_fifo_output_decoder;
+  end process fifo_read_output_decoder;
 
 
-  read_fifo : process(clk, rst_n) is
+  fifo_read : process(clk, rst_n) is
   begin
     if rst_n = '0' then
       fifo_dreg <= (others => '0');
@@ -211,7 +236,114 @@ begin
         fifo_dreg <= fifo_dout_i;
       end if;
     end if;
-  end process read_fifo;
+  end process fifo_read;
+
+
+  read_status_reg_statemachine_decoder : process(read_status_reg,
+                                                 axi_lite_state,
+                                                 M_AXI_rdata, M_AXI_rvalid) is
+  begin
+    read_status_reg_nxt <= read_status_reg;
+
+    if axi_lite_state = AXI_READ_DATA and M_AXI_rvalid = '1' then
+      if read_status_reg = '1' then
+        -- In this state we should verify if there is data available
+        -- Check the !rx_emtpy bit (this is bit 0 in the rdata)
+        if M_AXI_rdata(0) = '1' then
+          read_status_reg_nxt <= '0';
+        end if;
+      else
+        -- next request will be a read request for the status register
+        read_status_reg_nxt <= '1';
+      end if;
+    end if;
+  end process read_status_reg_statemachine_decoder;
+
+
+  readwrite_statemachine_decoder : process(readwrite_state,
+                                           axi_lite_state,
+                                           rx_bytecnt_state,
+                                           fifo_empty_i,
+                                           M_AXI_rvalid, M_AXI_bvalid,
+                                           send_nibble_state) is
+  begin
+    readwrite_state_nxt <= readwrite_state;
+
+    case readwrite_state is
+      when READ_RX =>
+        if axi_lite_state = AXI_READ_DATA and M_AXI_rvalid = '1' then
+          if read_status_reg = '0' and rx_bytecnt_state = RX_B7 then
+            -- We have received enought bytes (8), so we can go to
+            -- the next state.
+            readwrite_state_nxt <= IDLE;
+          end if;
+        end if;
+      when IDLE =>
+        -- In the IDLE state, we wait for the fifo to contain data
+        if fifo_empty_i = '0' then
+          readwrite_state_nxt <= WRITE_TX;
+        end if;
+      when WRITE_TX =>
+        if fifo_empty_i = '1' then
+          if axi_lite_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
+            if send_nibble_state = CR then
+              -- Go back to reading mode, there's no more data to write
+              -- to the tx buffer
+              readwrite_state_nxt <= READ_RX;
+            end if;
+          end if;
+        end if;
+    end case;
+  end process readwrite_statemachine_decoder;
+
+
+  rx_bytecnt_statemachine_decoder : process(rx_bytecnt_state, read_status_reg,
+                                            axi_lite_state, readwrite_state,
+                                            M_AXI_rdata, M_AXI_rvalid) is
+  begin
+    rx_bytecnt_state_nxt <= rx_bytecnt_state;
+
+    if readwrite_state = READ_RX then
+      if axi_lite_state = AXI_READ_DATA and M_AXI_rvalid = '1' then
+        if read_status_reg = '0' then
+          rx_bytecnt_state_nxt <= rx_bytecnt_state + 1;
+        end if;
+      end if;
+    else
+      rx_bytecnt_state_nxt <= RX_B0;
+    end if;
+  end process rx_bytecnt_statemachine_decoder;
+
+
+  rx_bytecnt_output_decoder : process(clk, rst_n) is
+    variable shift          : integer := 0;
+    variable bitmask        : unsigned((ADDR_WIDTH*2)-1 downto 0);
+    variable zero           : std_logic_vector((ADDR_WIDTH*2)-1-8 downto 0);
+    variable inverted_bm    : std_logic_vector((ADDR_WIDTH*2)-1 downto 0);
+    variable rdata_extended : std_logic_vector((ADDR_WIDTH*2)-1 downto 0);
+    variable shifted_byte   : std_logic_vector((ADDR_WIDTH*2)-1 downto 0);
+  begin
+    if rst_n = '0' then
+      addr_tmp <= (others => '0');
+    elsif rising_edge(clk) then
+      if readwrite_state = READ_RX and read_status_reg = '0' then
+        -- We're in read rx buffer state, not read status register state
+        if axi_lite_state = AXI_READ_DATA and M_AXI_rvalid = '1' then
+          shift := to_integer(rx_bytecnt_state);
+
+          bitmask := (7 downto 0 => '1', others => '0');
+          inverted_bm := not std_logic_vector(shift_left(bitmask, shift));
+
+          zero := (others => '0');
+          rdata_extended := zero & M_AXI_rdata(7 downto 0);
+          shifted_byte := std_logic_vector(shift_left(unsigned(rdata_extended),
+                                                      shift));
+
+          addr_tmp <= (addr_tmp and inverted_bm) or shifted_byte;
+        end if;
+      end if;
+    end if;
+  end process rx_bytecnt_output_decoder;
 
 
   send_nibble_statemachine_decoder : process(send_nibble_state, axi_lite_state,
@@ -230,23 +362,38 @@ begin
 
 
   axi_lite_statemachine_decoder : process(axi_lite_state, fifo_read_state,
+                                          readwrite_state, send_nibble_state,
                                           M_AXI_rdata, M_AXI_rvalid,
                                           M_AXI_bvalid) is
   begin
     axi_lite_state_nxt <= axi_lite_state;
+
     case axi_lite_state is
       when AXI_IDLE =>
-        if fifo_read_state = FIFO_READY then
+        if readwrite_state = READ_RX then
           axi_lite_state_nxt <= AXI_READ_REQ;
+        elsif readwrite_state = WRITE_TX then
+          if fifo_read_state = FIFO_READY then
+            axi_lite_state_nxt <= AXI_READ_REQ;
+          end if;
         end if;
       when AXI_READ_REQ =>
         axi_lite_state_nxt <= AXI_READ_DATA;
       when AXI_READ_DATA =>
         if M_AXI_rvalid = '1' then
-          if M_AXI_rdata(3) /= '1' then
-            axi_lite_state_nxt <= AXI_WRITE_REQ_DATA;
-          else
+          if readwrite_state = READ_RX then
+            -- In rx mode, make another axi read request to read nxt byte
             axi_lite_state_nxt <= AXI_READ_REQ;
+          elsif readwrite_state = WRITE_TX then
+            if M_AXI_rdata(3) /= '1' then
+              -- tx buffer is full
+              axi_lite_state_nxt <= AXI_WRITE_REQ_DATA;
+            else
+              axi_lite_state_nxt <= AXI_READ_REQ;
+            end if;
+          else
+            -- readwrite_state = IDLE
+            axi_lite_state_nxt <= AXI_IDLE;
           end if;
         end if;
       when AXI_WRITE_REQ_DATA =>
@@ -294,7 +441,7 @@ begin
           axi_arvalid <= '0';
           axi_rready <= '0';
         when AXI_READ_REQ =>
-          -- In this state, the read_fifo_state must be FIFO_READY
+          -- In this state, the fifo_read_state must be FIFO_READY
           if send_nibble_state = NUL1 then
             -- Only copy fifo_tmp once
             fifo_tmp <= fifo_dreg;
@@ -325,6 +472,8 @@ begin
             when CR   =>
               ascii := "00001101"; -- CR (ASCII: 13)
             when others =>
+              -- Convert the binary representation to hexademicals
+              -- encoded in ASCII characters.
               ascii := convert_to_ascii(fifo_tmp(179 downto 176));
               -- Left-shift fifo_tmp 4 bits
               for k in fifo_tmp'high downto fifo_tmp'low+4 loop
@@ -365,9 +514,30 @@ begin
   -- AXI Lite Read Data channel
   M_AXI_rready <= axi_rready;
 
-  -- For now put hard coded constants on the output for
-  -- monitoring specific addresses in the AXI traffic
-  axi4_addr1_o <= addr1_monitor;
-  axi4_addr2_o <= addr2_monitor;
+
+  addr_register : process(clk, rst_n) is
+  begin
+    if rst_n = '0' then
+      -- Default values for the address monitor
+      addr_reg((ADDR_WIDTH*2)-1 downto ADDR_WIDTH) <= addr1_def;
+      addr_reg(ADDR_WIDTH-1 downto 0) <= addr2_def;
+      addr_tmp_ready <= '0';
+    elsif rising_edge(clk) then
+      if rx_bytecnt_state = RX_B7 then
+        if axi_lite_state = AXI_READ_DATA and M_AXI_rvalid = '1' then
+          -- Delay copying addr_tmp to addr_reg with 1 clock cycle
+          addr_tmp_ready <= '1';
+        end if;
+      end if;
+
+      if addr_tmp_ready = '1' then
+        addr_reg <= addr_tmp;
+        addr_tmp_ready <= '0';
+      end if;
+    end if;
+  end process addr_register;
+
+  axi4_addr1_o <= addr_reg((ADDR_WIDTH*2)-1 downto ADDR_WIDTH);
+  axi4_addr2_o <= addr_reg(ADDR_WIDTH-1 downto 0);
 
 end architecture behaviour;
