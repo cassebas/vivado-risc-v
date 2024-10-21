@@ -194,7 +194,8 @@ begin
 
 
   fifo_read_statemachine_decoder : process(fifo_read_state, send_nibble_state,
-                                           axi_lite_state, fifo_empty_i) is
+                                           axi_lite_state, fifo_empty_i,
+                                           M_AXI_bvalid) is
   begin
     fifo_read_state_nxt <= fifo_read_state;
     case fifo_read_state is
@@ -243,19 +244,17 @@ begin
                                                  axi_lite_state,
                                                  M_AXI_rdata, M_AXI_rvalid) is
   begin
-    read_status_reg_nxt <= read_status_reg;
-
-    if axi_lite_state = AXI_READ_DATA and M_AXI_rvalid = '1' then
-      if read_status_reg = '1' then
+    if read_status_reg = '1' then
+      if axi_lite_state = AXI_READ_DATA and M_AXI_rvalid = '1' then
         -- In this state we should verify if there is data available
         -- Check the !rx_emtpy bit (this is bit 0 in the rdata)
         if M_AXI_rdata(0) = '1' then
           read_status_reg_nxt <= '0';
         end if;
-      else
-        -- next request will be a read request for the status register
-        read_status_reg_nxt <= '1';
       end if;
+    else
+      -- next request will be a read request for the status register
+      read_status_reg_nxt <= '1';
     end if;
   end process read_status_reg_statemachine_decoder;
 
@@ -329,7 +328,7 @@ begin
       if readwrite_state = READ_RX and read_status_reg = '0' then
         -- We're in read rx buffer state, not read status register state
         if axi_lite_state = AXI_READ_DATA and M_AXI_rvalid = '1' then
-          shift := to_integer(rx_bytecnt_state);
+          shift := to_integer(rx_bytecnt_state) * 8;
 
           bitmask := (7 downto 0 => '1', others => '0');
           inverted_bm := not std_logic_vector(shift_left(bitmask, shift));
@@ -441,10 +440,11 @@ begin
           axi_arvalid <= '0';
           axi_rready <= '0';
         when AXI_READ_REQ =>
-          -- In this state, the fifo_read_state must be FIFO_READY
-          if send_nibble_state = NUL1 then
-            -- Only copy fifo_tmp once
-            fifo_tmp <= fifo_dreg;
+          if readwrite_state = WRITE_TX then
+            if send_nibble_state = NUL1 then
+              -- Only copy fifo_tmp once
+              fifo_tmp <= fifo_dreg;
+            end if;
           end if;
           axi_araddr <= AXI_READ_STATUS_ADDR;
           axi_arvalid <= '1';
@@ -539,5 +539,8 @@ begin
 
   axi4_addr1_o <= addr_reg((ADDR_WIDTH*2)-1 downto ADDR_WIDTH);
   axi4_addr2_o <= addr_reg(ADDR_WIDTH-1 downto 0);
+
+  -- For debug purposes, put least significant bits on the LEDs
+  leds <= addr_reg(7 downto 0);
 
 end architecture behaviour;
