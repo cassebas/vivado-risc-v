@@ -162,7 +162,10 @@ architecture behaviour of fiforeader_axilite is
   -- AXI Lite Read Data channel
   signal axi_rready  : std_logic;
 
-  -- Read from UART: address is 4'h08
+  -- Read from UART rx buffer: address is 4'h00
+  constant AXI_READ_RXBUFFER_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
+    (others => '0');
+  -- Read from UART status register: address is 4'h08
   constant AXI_READ_STATUS_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
     (3 => '1', others => '0');
   -- Write to UART tx buffer: address is 4'h04
@@ -447,13 +450,17 @@ begin
           axi_arvalid <= '0';
           axi_rready <= '0';
         when AXI_READ_REQ =>
-          if readwrite_state = WRITE_TX then
-            if send_nibble_state = NUL1 then
-              -- Only copy fifo_tmp once
-              fifo_tmp <= fifo_dreg;
+          if readwrite_state = READ_RX and read_status_reg = '0' then
+            axi_araddr <= AXI_READ_RXBUFFER_ADDR;
+          else
+            axi_araddr <= AXI_READ_STATUS_ADDR;
+            if readwrite_state = WRITE_TX then
+              if send_nibble_state = NUL1 then
+                -- Only copy fifo_tmp once
+                fifo_tmp <= fifo_dreg;
+              end if;
             end if;
           end if;
-          axi_araddr <= AXI_READ_STATUS_ADDR;
           axi_arvalid <= '1';
         when AXI_READ_DATA =>
           if M_AXI_rvalid = '1' then
