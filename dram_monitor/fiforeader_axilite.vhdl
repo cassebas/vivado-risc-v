@@ -74,6 +74,7 @@ architecture behaviour of fiforeader_axilite is
   -- Input data received from the FIFO
   signal fifo_dreg : std_logic_vector(FIFO_DATA_WIDTH-1 downto 0);
   signal fifo_tmp  : std_logic_vector(FIFO_DATA_WIDTH-1 downto 0);
+  signal fifo_dreg_loaded : std_logic;
 
   type fifo_read_state_type is (FIFO_IDLE,
                                 FIFO_ENABLE,
@@ -232,9 +233,15 @@ begin
   begin
     if rst_n = '0' then
       fifo_dreg <= (others => '0');
+      fifo_dreg_loaded <= '0';
     elsif rising_edge(clk) then
       if fifo_read_state = FIFO_READY then
-        fifo_dreg <= fifo_dout_i;
+        if fifo_dreg_loaded = '0' then
+          fifo_dreg <= fifo_dout_i;
+          fifo_dreg_loaded <= '1';
+        end if;
+      else
+        fifo_dreg_loaded <= '0';
       end if;
     end if;
   end process fifo_read;
