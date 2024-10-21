@@ -548,6 +548,29 @@ begin
   axi4_addr2_o <= addr_reg(ADDR_WIDTH-1 downto 0);
 
   -- For debug purposes, put least significant bits on the LEDs
-  leds <= addr_reg(7 downto 0);
+  readwrite_state_led : process(readwrite_state, axi_lite_state) is
+  begin
+    case readwrite_state is
+      when READ_RX =>
+        leds(2 downto 0) <= (0 => '1', others => '0');
+      when IDLE =>
+        leds(2 downto 0) <= (1 => '1', others => '0');
+      when WRITE_TX =>
+        leds(2 downto 0) <= (2 => '1', others => '0');
+    end case;
+
+    case axi_lite_state is
+      when AXI_IDLE =>
+        leds(7 downto 3) <= (3 => '1', others => '0');
+      when AXI_READ_REQ =>
+        leds(7 downto 3) <= (4 => '1', others => '0');
+      when AXI_READ_DATA =>
+        leds(7 downto 3) <= (5 => '1', others => '0');
+      when AXI_WRITE_REQ_DATA =>
+        leds(7 downto 3) <= (6 => '1', others => '0');
+      when AXI_WRITE_RESP =>
+        leds(7 downto 3) <= (7 => '1', others => '0');
+    end case;
+  end process readwrite_state_led;
 
 end architecture behaviour;
