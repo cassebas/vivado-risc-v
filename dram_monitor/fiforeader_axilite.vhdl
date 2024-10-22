@@ -81,17 +81,14 @@ architecture behaviour of fiforeader_axilite is
                                 FIFO_READY);
   signal fifo_read_state, fifo_read_state_nxt : fifo_read_state_type;
 
-  type readwrite_state_type is (READ_RX, IDLE, WRITE_TX);
+  type readwrite_state_type is (READ_RX, WRITE_TX);
   signal readwrite_state, readwrite_state_nxt : readwrite_state_type;
-
-  -- This signal indicates whether a read of M_AXI_rdata is the status
-  -- register or the rx buffer
-  signal read_status_reg, read_status_reg_nxt : std_logic;
 
   type axi_lite_state_type is (AXI_IDLE,
                                AXI_READ_REQ_STATUS,
                                AXI_READ_REQ_BUFFER,
-                               AXI_READ_DATA,
+                               AXI_READ_DATA_STATUS,
+                               AXI_READ_DATA_BUFFER,
                                AXI_WRITE_REQ_DATA,
                                AXI_WRITE_RESP);
   signal axi_lite_state, axi_lite_state_nxt : axi_lite_state_type;
@@ -159,19 +156,19 @@ architecture behaviour of fiforeader_axilite is
   -- AXI Lite Read Request channel
   signal axi_araddr  : std_logic_vector(UART_ADDR_WIDTH-1 downto 0);
   signal axi_arvalid : std_logic;
-  signal axi_rdata   : std_logic_vector(UART_DATA_WIDTH-1 downto 0);
+  -- signal axi_rdata   : std_logic_vector(UART_DATA_WIDTH-1 downto 0);
   -- AXI Lite Read Data channel
   signal axi_rready  : std_logic;
 
   -- Read from UART rx buffer: address is 4'h00
   constant AXI_READ_RXBUFFER_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
     (others => '0');
-  -- Read from UART status register: address is 4'h08
-  constant AXI_READ_STATUS_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
-    (3 => '1', others => '0');
   -- Write to UART tx buffer: address is 4'h04
   constant AXI_WRITE_TXBUF_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
     (2 => '1', others => '0');
+  -- Read from UART status register: address is 4'h08
+  constant AXI_READ_STATUS_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
+    (3 => '1', others => '0');
   -- Write to UART control register: address is 4'h0c
   constant AXI_WRITE_CONTROL_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
     (3 => '1', 2 => '1', others => '0');
@@ -183,14 +180,12 @@ begin
     if rst_n = '0' then
       fifo_read_state <= FIFO_IDLE;
       readwrite_state <= READ_RX;
-      read_status_reg <= '1';
       rx_bytecnt_state <= RX_B0;
       send_nibble_state <= NUL1;
       axi_lite_state <= AXI_IDLE;
     elsif rising_edge(clk) then
       fifo_read_state <= fifo_read_state_nxt;
       readwrite_state <= readwrite_state_nxt;
-      read_status_reg <= read_status_reg_nxt;
       rx_bytecnt_state <= rx_bytecnt_state_nxt;
       send_nibble_state <= send_nibble_state_nxt;
       axi_lite_state <= axi_lite_state_nxt;
@@ -203,6 +198,7 @@ begin
                                            M_AXI_bvalid) is
   begin
     fifo_read_state_nxt <= fifo_read_state;
+
     case fifo_read_state is
       when FIFO_IDLE =>
         if fifo_empty_i = '0' then
@@ -251,29 +247,7 @@ begin
   end process fifo_read;
 
 
-  read_status_reg_statemachine_decoder : process(read_status_reg,
-                                                 axi_lite_state,
-                                                 M_AXI_rdata, M_AXI_rvalid) is
-  begin
-    read_status_reg_nxt <= read_status_reg;
-
-    if axi_lite_state = AXI_READ_DATA and M_AXI_rvalid = '1' then
-      if read_status_reg = '1' then
-        -- In this state we should verify if there is data available
-        -- Check the !rx_emtpy bit (this is bit 0 in the rdata)
-        if M_AXI_rdata(0) = '1' then
-          -- There is data available!
-          read_status_reg_nxt <= '0';
-        end if;
-      else
-        -- We were already reading from the rx buffer, read status register
-        read_status_reg_nxt <= '1';
-      end if;
-    end if;
-  end process read_status_reg_statemachine_decoder;
-
-
-  readwrite_statemachine_decoder : process(readwrite_state, read_status_reg,
+  readwrite_statemachine_decoder : process(readwrite_state,
                                            axi_lite_state, rx_bytecnt_state,
                                            fifo_empty_i,
                                            M_AXI_rvalid, M_AXI_bvalid,
@@ -283,19 +257,16 @@ begin
 
     case readwrite_state is
       when READ_RX =>
-        if axi_lite_state = AXI_READ_DATA and M_AXI_rvalid = '1' then
-          if read_status_reg = '0' and rx_bytecnt_state = RX_B7 then
-            -- We have received enought bytes (8), so we can go to
+        -- Only go from READ_RX to WRITE_TX when enough bytes have been read
+        if axi_lite_state = AXI_READ_DATA_BUFFER and M_AXI_rvalid = '1' then
+          if rx_bytecnt_state = RX_B7 then
+            -- We have received enough bytes (8), so we can go to
             -- the next state.
-            readwrite_state_nxt <= IDLE;
+            readwrite_state_nxt <= WRITE_TX;
           end if;
         end if;
-      when IDLE =>
-        -- In the IDLE state, we wait for the fifo to contain data
-        if fifo_empty_i = '0' then
-          readwrite_state_nxt <= WRITE_TX;
-        end if;
       when WRITE_TX =>
+        -- Only go from WRITE_TX to READ_RX when the FIFO is empty (again)
         if fifo_empty_i = '1' then
           if axi_lite_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
             if send_nibble_state = CR then
@@ -309,17 +280,15 @@ begin
   end process readwrite_statemachine_decoder;
 
 
-  rx_bytecnt_statemachine_decoder : process(rx_bytecnt_state, read_status_reg,
+  rx_bytecnt_statemachine_decoder : process(rx_bytecnt_state,
                                             axi_lite_state, readwrite_state,
                                             M_AXI_rdata, M_AXI_rvalid) is
   begin
     rx_bytecnt_state_nxt <= rx_bytecnt_state;
 
     if readwrite_state = READ_RX then
-      if axi_lite_state = AXI_READ_DATA and M_AXI_rvalid = '1' then
-        if read_status_reg = '0' then
-          rx_bytecnt_state_nxt <= rx_bytecnt_state + 1;
-        end if;
+      if axi_lite_state = AXI_READ_DATA_BUFFER and M_AXI_rvalid = '1' then
+        rx_bytecnt_state_nxt <= rx_bytecnt_state + 1;
       end if;
     else
       rx_bytecnt_state_nxt <= RX_B0;
@@ -338,9 +307,8 @@ begin
     if rst_n = '0' then
       addr_tmp <= (others => '0');
     elsif rising_edge(clk) then
-      if readwrite_state = READ_RX and read_status_reg = '0' then
-        -- We're in read rx buffer state, not read status register state
-        if axi_lite_state = AXI_READ_DATA and M_AXI_rvalid = '1' then
+      if readwrite_state = READ_RX then
+        if axi_lite_state = AXI_READ_DATA_BUFFER and M_AXI_rvalid = '1' then
           shift := to_integer(rx_bytecnt_state) * 8;
 
           bitmask := (7 downto 0 => '1', others => '0');
@@ -361,21 +329,21 @@ begin
   send_nibble_statemachine_decoder : process(send_nibble_state, axi_lite_state,
                                              M_AXI_bvalid) is
   begin
+    send_nibble_state_nxt <= send_nibble_state;
+
     if axi_lite_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
       if send_nibble_state = CR then
         send_nibble_state_nxt <= NUL1;
       else
         send_nibble_state_nxt <= send_nibble_state + 1;
       end if;
-    else
-      send_nibble_state_nxt <= send_nibble_state;
     end if;
   end process send_nibble_statemachine_decoder;
 
 
   axi_lite_statemachine_decoder : process(axi_lite_state, fifo_read_state,
                                           readwrite_state, send_nibble_state,
-                                          rx_bytecnt_state, read_status_reg,
+                                          rx_bytecnt_state,
                                           M_AXI_rdata, M_AXI_rvalid,
                                           M_AXI_bvalid) is
   begin
@@ -383,26 +351,28 @@ begin
 
     case axi_lite_state is
       when AXI_IDLE =>
-        if readwrite_state = READ_RX or fifo_read_state /= FIFO_IDLE then
+        if readwrite_state = READ_RX then
           axi_lite_state_nxt <= AXI_READ_REQ_STATUS;
+        else -- readwrite_state = WRITE_TX
+          if fifo_read_state = FIFO_READY then
+            axi_lite_state_nxt <= AXI_READ_REQ_STATUS;
+          end if;
         end if;
       when AXI_READ_REQ_STATUS =>
-        axi_lite_state_nxt <= AXI_READ_DATA;
+        axi_lite_state_nxt <= AXI_READ_DATA_STATUS;
       when AXI_READ_REQ_BUFFER =>
-        axi_lite_state_nxt <= AXI_READ_DATA;
-      when AXI_READ_DATA =>
+        axi_lite_state_nxt <= AXI_READ_DATA_BUFFER;
+      when AXI_READ_DATA_STATUS =>
         if M_AXI_rvalid = '1' then
           if readwrite_state = READ_RX then
-            if read_status_reg = '0' and rx_bytecnt_state = RX_B7 then
-              -- we are reading the last byte here, next state to idle state
-              axi_lite_state_nxt <= AXI_IDLE;
-            elsif read_status_reg = '1' and M_AXI_rdata(0) = '1' then
-              -- data available!
+            -- Check !rx_empty bit
+            if M_AXI_rdata(0) = '1' then
+              -- There is data available!
               axi_lite_state_nxt <= AXI_READ_REQ_BUFFER;
             else
               axi_lite_state_nxt <= AXI_READ_REQ_STATUS;
             end if;
-          elsif readwrite_state = WRITE_TX then
+          else -- readwrite_state = WRITE_TX
             if M_AXI_rdata(3) /= '1' then
               -- tx buffer is not full
               axi_lite_state_nxt <= AXI_WRITE_REQ_DATA;
@@ -410,9 +380,15 @@ begin
               -- tx buffer is full, back to reading status register again
               axi_lite_state_nxt <= AXI_READ_REQ_STATUS;
             end if;
-          else
-            -- readwrite_state = IDLE
+          end if;
+        end if;
+      when AXI_READ_DATA_BUFFER =>
+        if M_AXI_rvalid = '1' then
+          if rx_bytecnt_state = RX_B7 then
+            -- Now reading last byte, next state back to AXI_IDLE
             axi_lite_state_nxt <= AXI_IDLE;
+          else
+            axi_lite_state_nxt <= AXI_READ_REQ_STATUS;
           end if;
         end if;
       when AXI_WRITE_REQ_DATA =>
@@ -471,9 +447,14 @@ begin
         when AXI_READ_REQ_BUFFER =>
           axi_araddr <= AXI_READ_RXBUFFER_ADDR;
           axi_arvalid <= '1';
-        when AXI_READ_DATA =>
+        when AXI_READ_DATA_STATUS =>
           if M_AXI_rvalid = '1' then
-            axi_rdata <= M_AXI_rdata;
+            axi_rready <= '1';
+            axi_araddr <= (others => '0');
+            axi_arvalid <= '0';
+          end if;
+        when AXI_READ_DATA_BUFFER =>
+          if M_AXI_rvalid = '1' then
             axi_rready <= '1';
             axi_araddr <= (others => '0');
             axi_arvalid <= '0';
@@ -486,9 +467,9 @@ begin
           case send_nibble_state is
             when NUL1 | NUL2 | NUL3 | NUL4 | NUL5 | NUL6 =>
               ascii := "00110000"; -- '0' (ASCII: 48)
-            when HEX1 | HEX2 | HEX3 | HEX4 | HEX5 |HEX6 =>
+            when HEX1 | HEX2 | HEX3 | HEX4 | HEX5 | HEX6 =>
               ascii := "01111000"; -- 'x' (ASCII: 120)
-            when SP1 | SP2 | SP3 | SP4 | SP5  =>
+            when SP1 | SP2 | SP3 | SP4 | SP5 =>
               ascii := "00100000"; -- ' ' (ASCII: 32)
             when LF   =>
               ascii := "00001010"; -- LF (ASCII: 10)
@@ -546,8 +527,8 @@ begin
       addr_reg(ADDR_WIDTH-1 downto 0) <= addr2_def;
       addr_tmp_ready <= '0';
     elsif rising_edge(clk) then
-      if rx_bytecnt_state = RX_B7 then
-        if axi_lite_state = AXI_READ_DATA and M_AXI_rvalid = '1' then
+      if axi_lite_state = AXI_READ_DATA_BUFFER and M_AXI_rvalid = '1' then
+        if rx_bytecnt_state = RX_B7 then
           -- Delay copying addr_tmp to addr_reg with 1 clock cycle
           addr_tmp_ready <= '1';
         end if;
@@ -563,16 +544,31 @@ begin
   axi4_addr1_o <= addr_reg((ADDR_WIDTH*2)-1 downto ADDR_WIDTH);
   axi4_addr2_o <= addr_reg(ADDR_WIDTH-1 downto 0);
 
+  -- Maybe hardcoded for debugging purposes?
+  -- axi4_addr1_o <= addr1_def;
+  -- axi4_addr2_o <= addr2_def;
+
   -- For debug purposes, put least significant bits on the LEDs
-  readwrite_state_led : process(readwrite_state, axi_lite_state) is
+  readwrite_state_led : process(readwrite_state, axi_lite_state,
+                                fifo_empty_i, rx_bytecnt_state) is
   begin
+    if fifo_empty_i = '1' then
+      leds(0) <= '1';
+    else
+      leds(0) <= '0';
+    end if;
+
+    if rx_bytecnt_state = "000" then
+      leds(1) <= '1';
+    else
+      leds(1) <= '0';
+    end if;
+
     case readwrite_state is
       when READ_RX =>
-        leds(2 downto 0) <= (0 => '1', others => '0');
-      when IDLE =>
-        leds(2 downto 0) <= (1 => '1', others => '0');
+        leds(2) <= '0';
       when WRITE_TX =>
-        leds(2 downto 0) <= (2 => '1', others => '0');
+        leds(2) <= '1';
     end case;
 
     case axi_lite_state is
@@ -582,9 +578,9 @@ begin
         leds(7 downto 3) <= (4 => '1', others => '0');
       when AXI_READ_REQ_BUFFER =>
         leds(7 downto 3) <= (5 => '1', others => '0');
-      when AXI_READ_DATA =>
+      when AXI_READ_DATA_STATUS =>
         leds(7 downto 3) <= (6 => '1', others => '0');
-      when AXI_WRITE_REQ_DATA =>
+      when AXI_READ_DATA_BUFFER =>
         leds(7 downto 3) <= (7 => '1', others => '0');
       when others =>
         leds(7 downto 3) <= (others => '0');
