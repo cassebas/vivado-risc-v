@@ -383,7 +383,7 @@ begin
 
     case axi_lite_state is
       when AXI_IDLE =>
-        if readwrite_state = READ_RX or readwrite_state = WRITE_TX then
+        if readwrite_state = READ_RX or fifo_read_state /= FIFO_IDLE then
           axi_lite_state_nxt <= AXI_READ_REQ_STATUS;
         end if;
       when AXI_READ_REQ_STATUS =>
@@ -586,6 +586,8 @@ begin
         leds(7 downto 3) <= (6 => '1', others => '0');
       when AXI_WRITE_REQ_DATA =>
         leds(7 downto 3) <= (7 => '1', others => '0');
+      when others =>
+        leds(7 downto 3) <= (others => '0');
     end case;
   end process readwrite_state_led;
 
