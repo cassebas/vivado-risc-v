@@ -8,5 +8,7 @@
 #
 #    Connection on pins is txd:pin01 rxd:pin02
 #
-set_property -dict {PACKAGE_PIN AC26 IOSTANDARD LVCMOS33} [get_ports usb_uart_extra_txd];
-set_property -dict {PACKAGE_PIN AJ27 IOSTANDARD LVCMOS33} [get_ports usb_uart_extra_rxd];
+# TRY JD set_property -dict {PACKAGE_PIN AC26 IOSTANDARD LVCMOS33} [get_ports usb_uart_extra_txd];
+# TRY JD set_property -dict {PACKAGE_PIN AJ27 IOSTANDARD LVCMOS33} [get_ports usb_uart_extra_rxd];
+set_property -dict {PACKAGE_PIN V27 IOSTANDARD LVCMOS33} [get_ports usb_uart_extra_txd];
+set_property -dict {PACKAGE_PIN Y30 IOSTANDARD LVCMOS33} [get_ports usb_uart_extra_rxd];
