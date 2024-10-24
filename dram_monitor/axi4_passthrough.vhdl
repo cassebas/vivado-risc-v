@@ -186,22 +186,22 @@ begin
     if aresetn = '0' then
       fifo_wren <= '0';
     elsif rising_edge(aclk) then
-      if S00_AXI_arid = x"2" then
+      -- if S00_AXI_arid = x"2" then
         if (S00_AXI_araddr = addr1_monitor_i or
             S00_AXI_araddr = addr2_monitor_i) then
           if fifo_wren = '0' and fifo_full_i = '0' then
             if M00_AXI_rvalid = '1' and S00_AXI_rready = '1' then
-              -- S00_AXI_arsize should be 011 for 8 bytes per transfer
-              -- S00_AXI_arlen should be 111 for 7+1=8 transfers per burst
-              if S00_AXI_arsize = "011" and S00_AXI_arlen = "00000111" then
+              -- -- S00_AXI_arsize should be 011 for 8 bytes per transfer
+              -- -- S00_AXI_arlen should be 111 for 7+1=8 transfers per burst
+              -- if S00_AXI_arsize = "011" and S00_AXI_arlen = "00000111" then
                 fifo_wren <= '1';
-              end if;
+              -- end if;
             end if;
           else
             fifo_wren <= '0';
           end if;
         end if;
-      end if;
+      -- end if;
     end if;
   end process enable_fifo;
 
@@ -215,7 +215,7 @@ begin
     elsif rising_edge(aclk) then
       cycle_count <= cycle_count + 1;
 
-      if S00_AXI_arid = x"2" then
+      -- if S00_AXI_arid = x"2" then
         if (S00_AXI_araddr = addr1_monitor_i or
             S00_AXI_araddr = addr2_monitor_i) then
           if S00_AXI_arvalid = '1' and M00_AXI_arready = '1' then
@@ -263,7 +263,7 @@ begin
             fifo_din(DATA_WIDTH-1 downto 0) <= M00_AXI_rdata;
           end if;
         end if;
-      end if;
+      -- end if;
     end if;
   end process read_araddr_rdata;
 
