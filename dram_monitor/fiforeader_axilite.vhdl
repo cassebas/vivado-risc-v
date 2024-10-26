@@ -264,6 +264,10 @@ begin
             -- the next state.
             readwrite_state_nxt <= WRITE_TX;
           end if;
+        elsif fifo_empty_i = '0' then
+          -- There is data available, let's go to the write state
+          -- to communicate the data.
+          readwrite_state_nxt <= WRITE_TX;
         end if;
       when WRITE_TX =>
         -- Only go from WRITE_TX to READ_RX when the FIFO is empty (again)
