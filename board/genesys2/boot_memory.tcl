@@ -27,7 +27,7 @@ endgroup
 regenerate_bd_layout
 validate_bd_design
 save_bd_design
-open_bd_design {/home/caspar/local/git/vivado-risc-v/workspace/rocket32s1/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/bd/riscv/riscv.bd}
+open_bd_design {workspace/rocket32s1/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/bd/riscv/riscv.bd}
 create_bd_cell -type container -reference boot_memory IO/boot_memory_0
 startgroup
 set_property CONFIG.NUM_MI {6} [get_bd_cells IO/io_axi_s]

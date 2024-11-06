@@ -1,6 +1,6 @@
 open_project workspace/rocket32s1/vivado-genesys2-riscv/genesys2-riscv.xpr
 update_compile_order -fileset sources_1
-add_files -norecurse {/home/caspar/local/git/vivado-risc-v/boot_module/boot_module_v1_0_S00_AXI.vhd /home/caspar/local/git/vivado-risc-v/boot_module/boot_module_v1_0.vhd}
+add_files -norecurse {boot_module/boot_module_v1_0_S00_AXI.vhd boot_module/boot_module_v1_0.vhd}
 update_compile_order -fileset sources_1
 create_bd_design "boot_module"
 update_compile_order -fileset sources_1
@@ -8,17 +8,17 @@ startgroup
 create_bd_cell -type ip -vlnv xilinx.com:ip:blk_mem_gen:8.4 blk_mem_gen_0
 endgroup
 set_property -dict [list \
-  CONFIG.Byte_Size {8} \
-  CONFIG.Coe_File {/home/caspar/local/git/vivado-risc-v/bare-metal/hello-world/boot.coe} \
-  CONFIG.Enable_A {Always_Enabled} \
-  CONFIG.Fill_Remaining_Memory_Locations {true} \
-  CONFIG.Load_Init_File {true} \
-  CONFIG.Operating_Mode_A {READ_FIRST} \
-  CONFIG.Use_Byte_Write_Enable {true} \
-  CONFIG.Write_Depth_A {16384} \
-  CONFIG.Write_Width_A {32} \
-  CONFIG.use_bram_block {Stand_Alone} \
-] [get_bd_cells blk_mem_gen_0]
+                        CONFIG.Byte_Size {8} \
+                        CONFIG.Coe_File {../../../../../../../../../boot_module/bram_initialization.coe} \
+                        CONFIG.Enable_A {Always_Enabled} \
+                        CONFIG.Fill_Remaining_Memory_Locations {true} \
+                        CONFIG.Load_Init_File {true} \
+                        CONFIG.Operating_Mode_A {READ_FIRST} \
+                        CONFIG.Use_Byte_Write_Enable {true} \
+                        CONFIG.Write_Depth_A {16384} \
+                        CONFIG.Write_Width_A {32} \
+                        CONFIG.use_bram_block {Stand_Alone} \
+                       ] [get_bd_cells blk_mem_gen_0]
 create_bd_cell -type module -reference boot_module_v1_0 boot_module_v1_0_0
 connect_bd_net [get_bd_pins boot_module_v1_0_0/bram_clk_o] [get_bd_pins blk_mem_gen_0/clka]
 connect_bd_net [get_bd_pins boot_module_v1_0_0/bram_addr_o] [get_bd_pins blk_mem_gen_0/addra]
@@ -42,7 +42,7 @@ regenerate_bd_layout
 validate_bd_design
 save_bd_design
 
-open_bd_design {/home/caspar/local/git/vivado-risc-v/workspace/rocket32s1/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/bd/riscv/riscv.bd}
+open_bd_design {workspace/rocket32s1/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/bd/riscv/riscv.bd}
 create_bd_cell -type container -reference boot_module IO/boot_module_0
 startgroup
 set_property CONFIG.NUM_MI {6} [get_bd_cells IO/io_axi_s]
