@@ -89,28 +89,41 @@ entity axi4_passthrough is
     M00_AXI_rvalid  : in std_logic;
     M00_AXI_rready  : out std_logic;
 
-    -- FIFO ports, used for writing read request addresses
+    -- FIFO ports, used for writing read and write requests to dram
     fifo_full_i : in std_logic;
     fifo_din_o  : out std_logic_vector((ADDR_WIDTH +
                                         DATA_WIDTH +
                                         COUNTER_WIDTH*2 +
-                                        EVENTNR_WIDTH + 4)-1 downto 0);
+                                        EVENTNR_WIDTH + 4) downto 0);
     fifo_wren_o : out std_logic);
 end axi4_passthrough;
 
 
 architecture behaviour of axi4_passthrough is
 
-  signal fifo_din  : std_logic_vector((ADDR_WIDTH +
-                                       DATA_WIDTH +
-                                       COUNTER_WIDTH*2 +
-                                       EVENTNR_WIDTH + 4)-1 downto 0);
-  signal fifo_wren : std_logic;
+  signal rd_fifo_din  : std_logic_vector((ADDR_WIDTH +
+                                          DATA_WIDTH +
+                                          COUNTER_WIDTH*2 +
+                                          EVENTNR_WIDTH + 4) downto 0);
+  signal wr_fifo_din  : std_logic_vector((ADDR_WIDTH +
+                                          DATA_WIDTH +
+                                          COUNTER_WIDTH*2 +
+                                          EVENTNR_WIDTH + 4) downto 0);
+  signal rd_fifo_wren, wr_fifo_wren : std_logic;
 
   signal cycle_count : unsigned(COUNTER_WIDTH-1 downto 0);
   signal event_count : unsigned(EVENTNR_WIDTH-1 downto 0);
 
+  signal monitor : std_logic;
+  signal rd_req_ok, rd_resp_ok : std_logic;
+  signal wr_req_ok, wr_data_ok : std_logic;
+
+  -- A single bit will be put into the FIFO for the type of transaction.
+  constant rd_transaction : std_logic := '0';
+  constant wr_transaction : std_logic := '1';
+
 begin
+
   -- -- -----------------------------
   -- -- Write request channel
   -- -- -----------------------------
@@ -178,92 +191,251 @@ begin
   M00_AXI_rready <= S00_AXI_rready;
 
 
-  -- Register to FIFO output signals
-  fifo_din_o <= fifo_din;
-  fifo_wren_o <= fifo_wren;
+  -- -----------------------------------
+  -- Registers to FIFO output signals
+  -- -----------------------------------
+  fifo_din_o <= rd_fifo_din when rd_fifo_wren = '1' else
+                wr_fifo_din when wr_fifo_wren = '1' else
+                (others => '1');
+
+  fifo_wren_o <= rd_fifo_wren when rd_fifo_wren = '1' else
+                 wr_fifo_wren when wr_fifo_wren = '1' else
+                 '0';
 
 
-  enable_fifo : process(aclk, aresetn) is
+  cycle_counter : process(aclk, aresetn) is
   begin
     if aresetn = '0' then
-      fifo_wren <= '0';
-    elsif rising_edge(aclk) then
-      if S00_AXI_arid /= "0000" then
-        if (S00_AXI_araddr = addr1_monitor_i or
-            S00_AXI_araddr = addr2_monitor_i) then
-          if fifo_wren = '0' and fifo_full_i = '0' then
-            if M00_AXI_rvalid = '1' and S00_AXI_rready = '1' then
-              fifo_wren <= '1';
-            end if;
-          else
-            fifo_wren <= '0';
-          end if;
-        end if;
-      end if;
-    end if;
-  end process enable_fifo;
-
-
-  read_araddr_rdata : process(aclk, aresetn) is
-  begin
-    if aresetn = '0' then
-      fifo_din <= (others => '0');
       cycle_count <= (others => '0');
-      event_count <= (0 => '1', others => '0');
     elsif rising_edge(aclk) then
       cycle_count <= cycle_count + 1;
+    end if;
+  end process cycle_counter;
 
-      if S00_AXI_arid /= "0000" then
-        if (S00_AXI_araddr = addr1_monitor_i or
-            S00_AXI_araddr = addr2_monitor_i) then
-          if S00_AXI_arvalid = '1' and M00_AXI_arready = '1' then
-            event_count <= event_count + 1;
-            -- --
-            -- Read request accepted, this is the start of the transfer
-            --
-            -- Save the event number
-            fifo_din((ADDR_WIDTH +
-                      DATA_WIDTH +
-                      COUNTER_WIDTH*2 +
-                      EVENTNR_WIDTH + 4) - 1 downto
-                     (ADDR_WIDTH +
-                      DATA_WIDTH +
-                      COUNTER_WIDTH*2 + 4)) <= std_logic_vector(event_count);
-            -- Save the number of cycles spent up until now
-            fifo_din((ADDR_WIDTH +
-                      DATA_WIDTH +
-                      COUNTER_WIDTH*2 + 4) - 1 downto
-                     (ADDR_WIDTH +
-                      DATA_WIDTH +
-                      COUNTER_WIDTH + 4)) <= std_logic_vector(cycle_count);
-            -- Save the arid (transaction identifier of the read request)
-            fifo_din((ADDR_WIDTH +
-                      DATA_WIDTH + 4) - 1 downto
-                     (ADDR_WIDTH +
-                      DATA_WIDTH)) <= S00_AXI_arid;
-            -- Save the araddr (request read address)
-            fifo_din((ADDR_WIDTH +
-                      DATA_WIDTH) - 1 downto DATA_WIDTH) <= S00_AXI_araddr;
+
+  enable_fifos : process(aclk, aresetn) is
+  begin
+    if aresetn = '0' then
+      rd_fifo_wren <= '0';
+      wr_fifo_wren <= '0';
+      monitor <= '0';
+      event_count <= (0 => '1', others => '0');
+    elsif rising_edge(aclk) then
+      -- Default value for fifo_wren's, unless special conditions apply
+      rd_fifo_wren <= '0';
+      wr_fifo_wren <= '0';
+
+      if monitor = '1' then
+        -- Read request for addr1 has been seen
+
+        if M00_AXI_rvalid = '1' and S00_AXI_rready = '1' then
+          -- Handshake for the Read Data channel
+
+          if rd_fifo_wren = '0' and fifo_full_i = '0' then
+            rd_fifo_wren <= '1';
+
+            if M00_AXI_rlast = '1' then
+              -- This is the last transfer of the transaction, raise event_count
+              -- for the next transaction
+              event_count <= event_count + 1;
+
+              -- Maybe reset monitor?
+              if S00_AXI_arid = "0010" and S00_AXI_araddr = addr2_monitor_i then
+                monitor <= '0';
+              end if;
+            end if;
           end if;
+        end if;
 
-          --
-          -- Answer from DRAM memory
-          --
-          if M00_AXI_rvalid = '1' and S00_AXI_rready = '1' then
-            -- Save the number of cycles spent up until now
-            fifo_din((ADDR_WIDTH +
-                      DATA_WIDTH +
-                      COUNTER_WIDTH + 4) - 1 downto
-                     (ADDR_WIDTH +
-                      DATA_WIDTH + 4)) <= std_logic_vector(cycle_count);
+        if M00_AXI_wready = '1' and S00_AXI_wvalid = '1' then
+          -- Handshake for the Write Data channel
 
-            -- Save the rdata (the data from memory)
-            fifo_din(DATA_WIDTH-1 downto 0) <= M00_AXI_rdata;
+          if wr_fifo_wren = '0' and fifo_full_i = '0' then
+            wr_fifo_wren <= '1';
+
+            if S00_AXI_wlast = '1' then
+              -- This is the last transfer of the transaction, raise event_count
+              -- for the next transaction
+              event_count <= event_count + 1;
+            end if;
+          end if;
+        end if;
+      else -- monitor /= '1'
+        -- addr1 has not yet been seen
+        if M00_AXI_rvalid = '1' and S00_AXI_rready = '1' then
+          -- addr1 is being requested! This is a read request. Since we were
+          -- not monitoring yet, we don't have to look at the AXI write req
+          -- signals.
+          if S00_AXI_arid = "0010" and S00_AXI_araddr = addr1_monitor_i then
+            monitor <= '1';
+
+            if rd_fifo_wren = '0' and fifo_full_i = '0' then
+              rd_fifo_wren <= '1';
+            end if;
           end if;
         end if;
       end if;
     end if;
-  end process read_araddr_rdata;
+  end process enable_fifos;
 
+
+  read_request_register : process(aclk, aresetn) is
+  begin
+    if aresetn = '0' then
+      rd_fifo_din <= (others => '0');
+      rd_req_ok <= '0';
+      rd_resp_ok <= '0';
+    elsif rising_edge(aclk) then
+
+      if S00_AXI_arvalid = '1' and M00_AXI_arready = '1' then
+        -- Handshake for the Read Request channel
+
+        if rd_req_ok /= '1' then
+          -- --
+          -- Read request had not been registered yet
+          --
+          -- Save the type of request (READ)
+          rd_fifo_din((ADDR_WIDTH +
+                       DATA_WIDTH +
+                       COUNTER_WIDTH*2 +
+                       EVENTNR_WIDTH +4)) <= rd_transaction;
+          -- Save the event number
+          rd_fifo_din((ADDR_WIDTH +
+                       DATA_WIDTH +
+                       COUNTER_WIDTH*2 +
+                       EVENTNR_WIDTH + 4) - 1 downto
+                      (ADDR_WIDTH +
+                       DATA_WIDTH +
+                       COUNTER_WIDTH*2 + 4)) <= std_logic_vector(event_count);
+          -- Save the number of cycles spent up until now
+          rd_fifo_din((ADDR_WIDTH +
+                       DATA_WIDTH +
+                       COUNTER_WIDTH*2 + 4) - 1 downto
+                      (ADDR_WIDTH +
+                       DATA_WIDTH +
+                       COUNTER_WIDTH + 4)) <= std_logic_vector(cycle_count);
+          -- Save the arid (transaction identifier of the read request)
+          rd_fifo_din((ADDR_WIDTH +
+                       DATA_WIDTH + 4) - 1 downto
+                      (ADDR_WIDTH +
+                       DATA_WIDTH)) <= S00_AXI_arid;
+          -- Save the araddr (request read address)
+          rd_fifo_din((ADDR_WIDTH +
+                       DATA_WIDTH) - 1 downto DATA_WIDTH) <= S00_AXI_araddr;
+
+          -- Set rd_req_ok since the request has been logged now
+          rd_req_ok <= '1';
+        end if;
+      else
+        -- Reset rd_req_ok for the next request
+        rd_req_ok <= '0';
+      end if;
+
+      --
+      -- Answer from DRAM memory
+      --
+      if M00_AXI_rvalid = '1' and S00_AXI_rready = '1' then
+        -- Handshake for the Read Data channel
+
+        if rd_resp_ok /= '1' then
+          -- Save the number of cycles spent up until now
+          rd_fifo_din((ADDR_WIDTH +
+                       DATA_WIDTH +
+                       COUNTER_WIDTH + 4) - 1 downto
+                      (ADDR_WIDTH +
+                       DATA_WIDTH + 4)) <= std_logic_vector(cycle_count);
+
+          -- Save the rdata (the data from memory)
+          rd_fifo_din(DATA_WIDTH-1 downto 0) <= M00_AXI_rdata;
+
+          -- Set the rd_resp_ok since the response has been registered now
+          rd_resp_ok <= '1';
+        end if;
+      else
+        -- Reset rd_resp_ok for the next response
+        rd_resp_ok <= '0';
+      end if;
+    end if;
+  end process read_request_register;
+
+
+  write_request_register : process(aclk, aresetn) is
+  begin
+    if aresetn = '0' then
+      wr_fifo_din <= (others => '0');
+      wr_req_ok <= '0';
+      wr_data_ok <= '0';
+    elsif rising_edge(aclk) then
+
+      if S00_AXI_awvalid = '1' and M00_AXI_awready = '1' then
+        -- Handshake for the Write Request channel
+
+        if wr_req_ok /= '1' then
+          -- --
+          -- Write request had not been registered yet
+          --
+          -- Save the type of request (WRITE)
+          wr_fifo_din((ADDR_WIDTH +
+                       DATA_WIDTH +
+                       COUNTER_WIDTH*2 +
+                       EVENTNR_WIDTH +4)) <= wr_transaction;
+          -- Save the event number
+          wr_fifo_din((ADDR_WIDTH +
+                       DATA_WIDTH +
+                       COUNTER_WIDTH*2 +
+                       EVENTNR_WIDTH + 4) - 1 downto
+                      (ADDR_WIDTH +
+                       DATA_WIDTH +
+                       COUNTER_WIDTH*2 + 4)) <= std_logic_vector(event_count);
+          -- Save the number of cycles spent up until now
+          wr_fifo_din((ADDR_WIDTH +
+                       DATA_WIDTH +
+                       COUNTER_WIDTH*2 + 4) - 1 downto
+                      (ADDR_WIDTH +
+                       DATA_WIDTH +
+                       COUNTER_WIDTH + 4)) <= std_logic_vector(cycle_count);
+          -- Save the arid (transaction identifier of the write request)
+          wr_fifo_din((ADDR_WIDTH +
+                       DATA_WIDTH + 4) - 1 downto
+                      (ADDR_WIDTH +
+                       DATA_WIDTH)) <= S00_AXI_awid;
+          -- Save the araddr (request read address)
+          wr_fifo_din((ADDR_WIDTH +
+                       DATA_WIDTH) - 1 downto DATA_WIDTH) <= S00_AXI_awaddr;
+
+          -- Set rd_req_ok since the request has been logged now
+          wr_req_ok <= '1';
+        end if;
+      else
+        -- Reset rd_req_ok for the next request
+        wr_req_ok <= '0';
+      end if;
+
+      --
+      -- Write Data channel
+      --
+      if M00_AXI_wready = '1' and S00_AXI_wvalid = '1' then
+        -- Handshake for the Write Data channel
+
+        if wr_data_ok /= '1' then
+          -- Save the wdata (the data being written to memory)
+          wr_fifo_din(DATA_WIDTH-1 downto 0) <= S00_AXI_wdata;
+
+          -- Save the number of cycles spent up until now
+          wr_fifo_din((ADDR_WIDTH +
+                       DATA_WIDTH +
+                       COUNTER_WIDTH + 4) - 1 downto
+                      (ADDR_WIDTH +
+                       DATA_WIDTH + 4)) <= std_logic_vector(cycle_count);
+
+          wr_data_ok <= '1';
+        end if;
+      else
+        -- Reset wr_data_ok for the next data
+        wr_data_ok <= '0';
+      end if;
+
+    end if;
+  end process write_request_register;
 
 end architecture behaviour;

@@ -7,7 +7,7 @@ entity fiforeader_axilite is
     ADDR_WIDTH      : integer := 32;
     UART_ADDR_WIDTH : integer := 16;
     UART_DATA_WIDTH : integer := 32;
-    FIFO_DATA_WIDTH : integer := 180);
+    FIFO_DATA_WIDTH : integer := 181);
   port (
     clk   : in std_logic;
     rst_n : in std_logic;
@@ -96,36 +96,52 @@ architecture behaviour of fiforeader_axilite is
   -- The data will be sent to the terminal by 4 bits per transfer,
   -- because we want to print them as hexademicals encoded with
   -- ascii characters.
-  -- Including some print characters we need 61 states.
-  constant NIBBLE_STATE_LEN    : integer := 6;
+  -- Including some print characters we need 66 states.
+  constant NIBBLE_STATE_LEN    : integer := 7;
   signal send_nibble_state     : unsigned(NIBBLE_STATE_LEN-1 downto 0);
   signal send_nibble_state_nxt : unsigned(NIBBLE_STATE_LEN-1 downto 0);
   -- Some named constants at fixed positions to be printed
-  constant NUL1 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "000000"; -- 0
-  constant HEX1 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "000001"; -- 1
-  -- event number (16 bits, nibbles 2 - 5)
-  constant SP1  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "000110"; -- 6
-  constant NUL2 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "000111"; -- 7
-  constant HEX2 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "001000"; -- 8
-  -- cycle count at memory request (32 bits, nibbles 9 - 16)
-  constant SP2  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "010001"; -- 17
-  constant NUL3 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "010010"; -- 18
-  constant HEX3 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "010011"; -- 19
-  -- cycle count at returning data (32 bits, nibbles 20 - 27)
-  constant SP3  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "011100"; -- 28
-  constant NUL4 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "011101"; -- 29
-  constant HEX4 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "011110"; -- 30
-  -- arid (4 bits, nibble 31)
-  constant SP4  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "100000"; -- 32
-  constant NUL5 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "100001"; -- 33
-  constant HEX5 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "100010"; -- 34
-  -- request address (32 bits, nibbles 35-42)
-  constant SP5  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "101011"; -- 43
-  constant NUL6 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "101100"; -- 44
-  constant HEX6 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "101101"; -- 45
-  -- data (64 bits, nibbles 46-61)
-  constant LF   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "111110"; -- 62
-  constant CR   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "111111"; -- 63
+  constant RWCH : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0000000"; -- 0
+  constant SP1  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0000001"; -- 1
+  constant NUL1 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0000010"; -- 2
+  constant HEX1 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0000011"; -- 3
+  -- event number (16 bits = 4 nibbles, states 4 - 7)
+  constant SP2  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0001000"; -- 8
+  constant NUL2 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0001001"; -- 9
+  constant HEX2 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0001010"; -- 10
+  -- cycle count at memory request (32 bits = 8 nibbles, states 11 - 18)
+  constant SP3  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0010011"; -- 19
+  constant NUL3 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0010100"; -- 20
+  constant HEX3 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0010101"; -- 21
+  -- cycle count at returning data (32 bits = 8 nibbles, states 22 - 29)
+  constant SP4  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0011110"; -- 30
+  constant NUL4 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0011111"; -- 31
+  constant HEX4 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0100000"; -- 32
+  -- arid (4 bits = 1 nibble, state 33)
+  constant SP5  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0100010"; -- 34
+  constant NUL5 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0100011"; -- 35
+  constant HEX5 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0100100"; -- 36
+  -- request address (32 bits = 4 nibbles, states 37-44)
+  constant SP6  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0101101"; -- 45
+  constant NUL6 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0101110"; -- 46
+  constant HEX6 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0101111"; -- 47
+  -- data (64 bits = 16 nibbles, states 48-63)
+  constant LF   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "1000000"; -- 64
+  constant CR   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "1000001"; -- 65
+
+  -- Definition of ascii characters, to denote whether a transfer
+  -- was a read transacation or a write transaction.
+  --
+  -- 'R' (read, decimal ascii: 82)
+  constant r_ascii : std_logic_vector(7 downto 0) := "01010010";
+  -- 'W' (write, decimal ascii: 87)
+  constant w_ascii : std_logic_vector(7 downto 0) := "01010111";
+  -- 'U' (unknown, decimal ascii: 86)
+  constant u_ascii : std_logic_vector(7 downto 0) := "01010110";
+  --
+  -- A single bit will be put into the FIFO for the type of transaction.
+  constant rd_transaction : std_logic := '0';
+  constant wr_transaction : std_logic := '1';
 
   --
   -- Determination of the addresses that must be monitored by AXI passthrough
@@ -181,7 +197,7 @@ begin
       fifo_read_state <= FIFO_IDLE;
       readwrite_state <= READ_RX;
       rx_bytecnt_state <= RX_B0;
-      send_nibble_state <= NUL1;
+      send_nibble_state <= RWCH;
       axi_lite_state <= AXI_IDLE;
     elsif rising_edge(clk) then
       fifo_read_state <= fifo_read_state_nxt;
@@ -337,7 +353,7 @@ begin
 
     if axi_lite_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
       if send_nibble_state = CR then
-        send_nibble_state_nxt <= NUL1;
+        send_nibble_state_nxt <= RWCH;
       else
         send_nibble_state_nxt <= send_nibble_state + 1;
       end if;
@@ -443,7 +459,7 @@ begin
           axi_araddr <= AXI_READ_STATUS_ADDR;
           axi_arvalid <= '1';
           if readwrite_state = WRITE_TX then
-            if send_nibble_state = NUL1 then
+            if send_nibble_state = RWCH then
               -- Only copy fifo_tmp once
               fifo_tmp <= fifo_dreg;
             end if;
@@ -469,11 +485,19 @@ begin
           axi_wdata(UART_DATA_WIDTH-1 downto 8) <= (others => '0');
 
           case send_nibble_state is
+            when RWCH =>
+              if fifo_tmp(180) = rd_transaction then
+                ascii := r_ascii;
+              elsif fifo_tmp(180) = wr_transaction then
+                ascii := w_ascii;
+              else -- shouldn't happen
+                ascii := u_ascii;
+              end if;
             when NUL1 | NUL2 | NUL3 | NUL4 | NUL5 | NUL6 =>
               ascii := "00110000"; -- '0' (ASCII: 48)
             when HEX1 | HEX2 | HEX3 | HEX4 | HEX5 | HEX6 =>
               ascii := "01111000"; -- 'x' (ASCII: 120)
-            when SP1 | SP2 | SP3 | SP4 | SP5 =>
+            when SP1 | SP2 | SP3 | SP4 | SP5 | SP6 =>
               ascii := "00100000"; -- ' ' (ASCII: 32)
             when LF   =>
               ascii := "00001010"; -- LF (ASCII: 10)
