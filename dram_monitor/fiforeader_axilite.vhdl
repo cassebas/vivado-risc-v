@@ -7,7 +7,7 @@ entity fiforeader_axilite is
     ADDR_WIDTH      : integer := 32;
     UART_ADDR_WIDTH : integer := 16;
     UART_DATA_WIDTH : integer := 32;
-    FIFO_DATA_WIDTH : integer := 181);
+    FIFO_DATA_WIDTH : integer := 185);
   port (
     clk   : in std_logic;
     rst_n : in std_logic;
@@ -109,25 +109,29 @@ architecture behaviour of fiforeader_axilite is
   constant SP2  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0001000"; -- 8
   constant NUL2 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0001001"; -- 9
   constant HEX2 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0001010"; -- 10
-  -- cycle count at memory request (32 bits = 8 nibbles, states 11 - 18)
-  constant SP3  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0010011"; -- 19
-  constant NUL3 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0010100"; -- 20
-  constant HEX3 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0010101"; -- 21
-  -- cycle count at returning data (32 bits = 8 nibbles, states 22 - 29)
-  constant SP4  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0011110"; -- 30
-  constant NUL4 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0011111"; -- 31
-  constant HEX4 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0100000"; -- 32
-  -- arid (4 bits = 1 nibble, state 33)
+  -- burst count (4 bits = 1 nibble, state 11)
+  constant SP3  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0001100"; -- 12
+  constant NUL3 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0001101"; -- 13
+  constant HEX3 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0001110"; -- 14
+  -- cycle count at memory request (32 bits = 8 nibbles, states 15 - 22)
+  constant SP4  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0010111"; -- 23
+  constant NUL4 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0011000"; -- 24
+  constant HEX4 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0011001"; -- 25
+  -- cycle count at returning data (32 bits = 8 nibbles, states 26 - 33)
   constant SP5  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0100010"; -- 34
   constant NUL5 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0100011"; -- 35
   constant HEX5 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0100100"; -- 36
-  -- request address (32 bits = 4 nibbles, states 37-44)
-  constant SP6  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0101101"; -- 45
-  constant NUL6 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0101110"; -- 46
-  constant HEX6 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0101111"; -- 47
-  -- data (64 bits = 16 nibbles, states 48-63)
-  constant LF   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "1000000"; -- 64
-  constant CR   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "1000001"; -- 65
+  -- arid (4 bits = 1 nibble, state 37)
+  constant SP6  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0100110"; -- 38
+  constant NUL6 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0100111"; -- 39
+  constant HEX6 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0101000"; -- 40
+  -- request address (32 bits = 8 nibbles, states 41-48)
+  constant SP7  : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0110001"; -- 49
+  constant NUL7 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0110010"; -- 50
+  constant HEX7 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0110011"; -- 51
+  -- data (64 bits = 16 nibbles, states 52-67)
+  constant LF   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "1000100"; -- 68
+  constant CR   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "1000101"; -- 69
 
   -- Definition of ascii characters, to denote whether a transfer
   -- was a read transacation or a write transaction.
@@ -486,18 +490,18 @@ begin
 
           case send_nibble_state is
             when RWCH =>
-              if fifo_tmp(180) = rd_transaction then
+              if fifo_tmp(184) = rd_transaction then
                 ascii := r_ascii;
-              elsif fifo_tmp(180) = wr_transaction then
+              elsif fifo_tmp(184) = wr_transaction then
                 ascii := w_ascii;
               else -- shouldn't happen
                 ascii := u_ascii;
               end if;
-            when NUL1 | NUL2 | NUL3 | NUL4 | NUL5 | NUL6 =>
+            when NUL1 | NUL2 | NUL3 | NUL4 | NUL5 | NUL6 | NUL7 =>
               ascii := "00110000"; -- '0' (ASCII: 48)
-            when HEX1 | HEX2 | HEX3 | HEX4 | HEX5 | HEX6 =>
+            when HEX1 | HEX2 | HEX3 | HEX4 | HEX5 | HEX6 | HEX7 =>
               ascii := "01111000"; -- 'x' (ASCII: 120)
-            when SP1 | SP2 | SP3 | SP4 | SP5 | SP6 =>
+            when SP1 | SP2 | SP3 | SP4 | SP5 | SP6 | SP7 =>
               ascii := "00100000"; -- ' ' (ASCII: 32)
             when LF   =>
               ascii := "00001010"; -- LF (ASCII: 10)
@@ -506,7 +510,7 @@ begin
             when others =>
               -- Convert the binary representation to hexademicals
               -- encoded in ASCII characters.
-              ascii := convert_to_ascii(fifo_tmp(179 downto 176));
+              ascii := convert_to_ascii(fifo_tmp(183 downto 180));
               -- Left-shift fifo_tmp 4 bits
               for k in fifo_tmp'high downto fifo_tmp'low+4 loop
                 fifo_tmp(k) <= fifo_tmp(k - 4);

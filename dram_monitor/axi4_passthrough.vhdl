@@ -4,10 +4,13 @@ use ieee.numeric_std.all;
 
 entity axi4_passthrough is
   generic (
-    ADDR_WIDTH    : integer := 32;
-    DATA_WIDTH    : integer := 64;
+    TYPE_WIDTH    : integer := 1;
+    EVENTNR_WIDTH : integer := 16;
+    BURST_WIDTH   : integer := 4;
     COUNTER_WIDTH : integer := 32;
-    EVENTNR_WIDTH : integer := 16);
+    ARWID_WIDTH   : integer := 4;
+    ADDR_WIDTH    : integer := 32;
+    DATA_WIDTH    : integer := 64);
   port (
     aclk            : in std_logic;
     aresetn         : in std_logic;
@@ -91,24 +94,33 @@ entity axi4_passthrough is
 
     -- FIFO ports, used for writing read and write requests to dram
     fifo_full_i : in std_logic;
-    fifo_din_o  : out std_logic_vector((ADDR_WIDTH +
-                                        DATA_WIDTH +
+    fifo_din_o  : out std_logic_vector((TYPE_WIDTH +
+                                        EVENTNR_WIDTH +
+                                        BURST_WIDTH +
                                         COUNTER_WIDTH*2 +
-                                        EVENTNR_WIDTH + 4) downto 0);
+                                        ARWID_WIDTH +
+                                        ADDR_WIDTH +
+                                        DATA_WIDTH - 1) downto 0);
     fifo_wren_o : out std_logic);
 end axi4_passthrough;
 
 
 architecture behaviour of axi4_passthrough is
 
-  signal rd_fifo_din  : std_logic_vector((ADDR_WIDTH +
-                                          DATA_WIDTH +
-                                          COUNTER_WIDTH*2 +
-                                          EVENTNR_WIDTH + 4) downto 0);
-  signal wr_fifo_din  : std_logic_vector((ADDR_WIDTH +
-                                          DATA_WIDTH +
-                                          COUNTER_WIDTH*2 +
-                                          EVENTNR_WIDTH + 4) downto 0);
+  signal rd_fifo_din : std_logic_vector((TYPE_WIDTH +
+                                         EVENTNR_WIDTH +
+                                         BURST_WIDTH +
+                                         COUNTER_WIDTH*2 +
+                                         ARWID_WIDTH +
+                                         ADDR_WIDTH +
+                                         DATA_WIDTH - 1) downto 0);
+  signal wr_fifo_din : std_logic_vector((TYPE_WIDTH +
+                                         EVENTNR_WIDTH +
+                                         BURST_WIDTH +
+                                         COUNTER_WIDTH*2 +
+                                         ARWID_WIDTH +
+                                         ADDR_WIDTH +
+                                         DATA_WIDTH - 1) downto 0);
   signal rd_fifo_wren, wr_fifo_wren : std_logic;
 
   signal cycle_count : unsigned(COUNTER_WIDTH-1 downto 0);
@@ -295,33 +307,59 @@ begin
           -- Read request had not been registered yet
           --
           -- Save the type of request (READ)
-          rd_fifo_din((ADDR_WIDTH +
-                       DATA_WIDTH +
-                       COUNTER_WIDTH*2 +
-                       EVENTNR_WIDTH +4)) <= rd_transaction;
+          rd_fifo_din(TYPE_WIDTH +
+                      EVENTNR_WIDTH +
+                      BURST_WIDTH +
+                      COUNTER_WIDTH*2 +
+                      ARWID_WIDTH +
+                      ADDR_WIDTH +
+                      DATA_WIDTH - 1) <= rd_transaction;
+
           -- Save the event number
-          rd_fifo_din((ADDR_WIDTH +
-                       DATA_WIDTH +
+          rd_fifo_din((EVENTNR_WIDTH +
+                       BURST_WIDTH +
                        COUNTER_WIDTH*2 +
-                       EVENTNR_WIDTH + 4) - 1 downto
-                      (ADDR_WIDTH +
-                       DATA_WIDTH +
-                       COUNTER_WIDTH*2 + 4)) <= std_logic_vector(event_count);
+                       ARWID_WIDTH +
+                       ADDR_WIDTH +
+                       DATA_WIDTH - 1) downto
+                      (BURST_WIDTH +
+                       COUNTER_WIDTH*2 +
+                       ARWID_WIDTH +
+                       ADDR_WIDTH +
+                       DATA_WIDTH)) <= std_logic_vector(event_count);
+
+          -- Save the burst size
+          rd_fifo_din((BURST_WIDTH +
+                       COUNTER_WIDTH*2 +
+                       ARWID_WIDTH +
+                       ADDR_WIDTH +
+                       DATA_WIDTH - 1) downto
+                      (COUNTER_WIDTH*2 +
+                       ARWID_WIDTH +
+                       ADDR_WIDTH +
+                       DATA_WIDTH)) <= ('0' & S00_AXI_arsize);
+
           -- Save the number of cycles spent up until now
-          rd_fifo_din((ADDR_WIDTH +
-                       DATA_WIDTH +
-                       COUNTER_WIDTH*2 + 4) - 1 downto
-                      (ADDR_WIDTH +
-                       DATA_WIDTH +
-                       COUNTER_WIDTH + 4)) <= std_logic_vector(cycle_count);
+          rd_fifo_din((COUNTER_WIDTH*2 +
+                       ARWID_WIDTH +
+                       ADDR_WIDTH +
+                       DATA_WIDTH - 1) downto
+                      (COUNTER_WIDTH +
+                       ARWID_WIDTH +
+                       ADDR_WIDTH +
+                       DATA_WIDTH)) <= std_logic_vector(cycle_count);
+
           -- Save the arid (transaction identifier of the read request)
-          rd_fifo_din((ADDR_WIDTH +
-                       DATA_WIDTH + 4) - 1 downto
+          rd_fifo_din((ARWID_WIDTH +
+                       ADDR_WIDTH +
+                       DATA_WIDTH - 1) downto
                       (ADDR_WIDTH +
                        DATA_WIDTH)) <= S00_AXI_arid;
+
           -- Save the araddr (request read address)
           rd_fifo_din((ADDR_WIDTH +
-                       DATA_WIDTH) - 1 downto DATA_WIDTH) <= S00_AXI_araddr;
+                       DATA_WIDTH - 1) downto
+                      (DATA_WIDTH)) <= S00_AXI_araddr;
 
           -- Set rd_req_ok since the request has been logged now
           rd_req_ok <= '1';
@@ -339,11 +377,13 @@ begin
 
         if rd_resp_ok /= '1' then
           -- Save the number of cycles spent up until now
-          rd_fifo_din((ADDR_WIDTH +
-                       DATA_WIDTH +
-                       COUNTER_WIDTH + 4) - 1 downto
-                      (ADDR_WIDTH +
-                       DATA_WIDTH + 4)) <= std_logic_vector(cycle_count);
+          rd_fifo_din((COUNTER_WIDTH +
+                       ARWID_WIDTH +
+                       ADDR_WIDTH +
+                       DATA_WIDTH - 1) downto
+                      (ARWID_WIDTH +
+                       ADDR_WIDTH +
+                       DATA_WIDTH)) <= std_logic_vector(cycle_count);
 
           -- Save the rdata (the data from memory)
           rd_fifo_din(DATA_WIDTH-1 downto 0) <= M00_AXI_rdata;
@@ -375,33 +415,60 @@ begin
           -- Write request had not been registered yet
           --
           -- Save the type of request (WRITE)
-          wr_fifo_din((ADDR_WIDTH +
-                       DATA_WIDTH +
-                       COUNTER_WIDTH*2 +
-                       EVENTNR_WIDTH +4)) <= wr_transaction;
+          wr_fifo_din(TYPE_WIDTH +
+                      EVENTNR_WIDTH +
+                      BURST_WIDTH +
+                      COUNTER_WIDTH*2 +
+                      ARWID_WIDTH +
+                      ADDR_WIDTH +
+                      DATA_WIDTH - 1) <= wr_transaction;
+
           -- Save the event number
-          wr_fifo_din((ADDR_WIDTH +
-                       DATA_WIDTH +
+          wr_fifo_din((EVENTNR_WIDTH +
+                       BURST_WIDTH +
                        COUNTER_WIDTH*2 +
-                       EVENTNR_WIDTH + 4) - 1 downto
-                      (ADDR_WIDTH +
-                       DATA_WIDTH +
-                       COUNTER_WIDTH*2 + 4)) <= std_logic_vector(event_count);
+                       ARWID_WIDTH +
+                       ADDR_WIDTH +
+                       DATA_WIDTH - 1) downto
+                      (BURST_WIDTH +
+                       COUNTER_WIDTH*2 +
+                       ARWID_WIDTH +
+                       ADDR_WIDTH +
+                       DATA_WIDTH)) <= std_logic_vector(event_count);
+
+          -- Save the burst size
+          wr_fifo_din((BURST_WIDTH +
+                       COUNTER_WIDTH*2 +
+                       ARWID_WIDTH +
+                       ADDR_WIDTH +
+                       DATA_WIDTH - 1) downto
+                      (COUNTER_WIDTH*2 +
+                       ARWID_WIDTH +
+                       ADDR_WIDTH +
+                       DATA_WIDTH)) <= ('0' & S00_AXI_awsize);
+
           -- Save the number of cycles spent up until now
-          wr_fifo_din((ADDR_WIDTH +
-                       DATA_WIDTH +
-                       COUNTER_WIDTH*2 + 4) - 1 downto
-                      (ADDR_WIDTH +
-                       DATA_WIDTH +
-                       COUNTER_WIDTH + 4)) <= std_logic_vector(cycle_count);
-          -- Save the arid (transaction identifier of the write request)
-          wr_fifo_din((ADDR_WIDTH +
-                       DATA_WIDTH + 4) - 1 downto
+          wr_fifo_din((COUNTER_WIDTH*2 +
+                       ARWID_WIDTH +
+                       ADDR_WIDTH +
+                       DATA_WIDTH - 1) downto
+                      (COUNTER_WIDTH +
+                       ARWID_WIDTH +
+                       ADDR_WIDTH +
+                       DATA_WIDTH)) <= std_logic_vector(cycle_count);
+
+
+          -- Save the awid (transaction identifier of the write request)
+          wr_fifo_din((ARWID_WIDTH +
+                       ADDR_WIDTH +
+                       DATA_WIDTH - 1) downto
                       (ADDR_WIDTH +
                        DATA_WIDTH)) <= S00_AXI_awid;
-          -- Save the araddr (request read address)
+
+          -- Save the awaddr (request write address)
           wr_fifo_din((ADDR_WIDTH +
-                       DATA_WIDTH) - 1 downto DATA_WIDTH) <= S00_AXI_awaddr;
+                       DATA_WIDTH - 1) downto
+                      (DATA_WIDTH)) <= S00_AXI_awaddr;
 
           -- Set rd_req_ok since the request has been logged now
           wr_req_ok <= '1';
@@ -422,11 +489,13 @@ begin
           wr_fifo_din(DATA_WIDTH-1 downto 0) <= S00_AXI_wdata;
 
           -- Save the number of cycles spent up until now
-          wr_fifo_din((ADDR_WIDTH +
-                       DATA_WIDTH +
-                       COUNTER_WIDTH + 4) - 1 downto
-                      (ADDR_WIDTH +
-                       DATA_WIDTH + 4)) <= std_logic_vector(cycle_count);
+          wr_fifo_din((COUNTER_WIDTH +
+                       ARWID_WIDTH +
+                       ADDR_WIDTH +
+                       DATA_WIDTH - 1) downto
+                      (ARWID_WIDTH +
+                       ADDR_WIDTH +
+                       DATA_WIDTH)) <= std_logic_vector(cycle_count);
 
           wr_data_ok <= '1';
         end if;

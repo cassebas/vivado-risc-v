@@ -20,7 +20,7 @@ endgroup
 set_property -dict [list \
   CONFIG.Fifo_Implementation {Common_Clock_Builtin_FIFO} \
   CONFIG.Input_Depth {65536} \
-  CONFIG.Input_Data_Width {181} \
+  CONFIG.Input_Data_Width {185} \
 ] [get_bd_cells DDR/fifo_generator_0]
 
 connect_bd_net [get_bd_pins DDR/axi_clock] [get_bd_pins DDR/fifo_generator_0/clk]
