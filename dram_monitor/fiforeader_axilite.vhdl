@@ -126,8 +126,8 @@ architecture behaviour of fiforeader_axilite is
   constant NUL6 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0101110"; -- 46
   constant HEX6 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0101111"; -- 47
   -- data (64 bits = 16 nibbles, states 48-63)
-  constant LF   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "1000000"; -- 64
-  constant CR   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "1000001"; -- 65
+  constant CR   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "1000000"; -- 64
+  constant LF   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "1000001"; -- 65
 
   -- Definition of ascii characters, to denote whether a transfer
   -- was a read transacation or a write transaction.
@@ -224,7 +224,7 @@ begin
         fifo_read_state_nxt <= FIFO_READY;
       when FIFO_READY =>
         if axi_lite_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
-          if send_nibble_state = CR then
+          if send_nibble_state = LF then
             fifo_read_state_nxt <= FIFO_IDLE;
           end if;
         end if;
@@ -289,7 +289,7 @@ begin
         -- Only go from WRITE_TX to READ_RX when the FIFO is empty (again)
         if fifo_empty_i = '1' then
           if axi_lite_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
-            if send_nibble_state = CR then
+            if send_nibble_state = LF then
               -- Go back to reading mode, there's no more data to write
               -- to the tx buffer
               readwrite_state_nxt <= READ_RX;
@@ -352,7 +352,7 @@ begin
     send_nibble_state_nxt <= send_nibble_state;
 
     if axi_lite_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
-      if send_nibble_state = CR then
+      if send_nibble_state = LF then
         send_nibble_state_nxt <= RWCH;
       else
         send_nibble_state_nxt <= send_nibble_state + 1;
@@ -415,7 +415,7 @@ begin
         axi_lite_state_nxt <= AXI_WRITE_RESP;
       when AXI_WRITE_RESP =>
         if M_AXI_bvalid = '1' then
-          if send_nibble_state = CR then
+          if send_nibble_state = LF then
             axi_lite_state_nxt <= AXI_IDLE;
           else
             axi_lite_state_nxt <= AXI_READ_REQ_STATUS;
@@ -499,10 +499,10 @@ begin
               ascii := "01111000"; -- 'x' (ASCII: 120)
             when SP1 | SP2 | SP3 | SP4 | SP5 | SP6 =>
               ascii := "00100000"; -- ' ' (ASCII: 32)
-            when LF   =>
-              ascii := "00001010"; -- LF (ASCII: 10)
             when CR   =>
               ascii := "00001101"; -- CR (ASCII: 13)
+            when LF   =>
+              ascii := "00001010"; -- LF (ASCII: 10)
             when others =>
               -- Convert the binary representation to hexademicals
               -- encoded in ASCII characters.
