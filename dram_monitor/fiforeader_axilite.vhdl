@@ -288,7 +288,9 @@ begin
       when WRITE_TX =>
         -- Only go from WRITE_TX to READ_RX when the FIFO is empty (again)
         if fifo_empty_i = '1' then
-          if axi_lite_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
+          if axi_lite_state = AXI_IDLE then
+            readwrite_state_nxt <= READ_RX;
+          elsif axi_lite_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
             if send_nibble_state = LF then
               -- Go back to reading mode, there's no more data to write
               -- to the tx buffer
