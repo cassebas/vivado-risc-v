@@ -58,6 +58,11 @@ startgroup
 create_bd_pin -dir O -from 7 -to 0 DDR/leds
 connect_bd_net [get_bd_pins DDR/leds] [get_bd_pins DDR/fiforeader_axilite_0/leds]
 endgroup
+
+startgroup
+create_bd_pin -dir O DDR/usb_uart_extra_rtsn
+connect_bd_net [get_bd_pins DDR/usb_uart_extra_rtsn] [get_bd_pins DDR/uart_0/RTSn]
+endgroup
 startgroup
 create_bd_pin -dir I DDR/usb_uart_extra_rxd
 connect_bd_net [get_bd_pins DDR/usb_uart_extra_rxd] [get_bd_pins DDR/uart_0/RxD]
@@ -67,6 +72,16 @@ create_bd_pin -dir O DDR/usb_uart_extra_txd
 connect_bd_net [get_bd_pins DDR/usb_uart_extra_txd] [get_bd_pins DDR/uart_0/TxD]
 endgroup
 startgroup
+create_bd_pin -dir I DDR/usb_uart_extra_ctsn
+connect_bd_net [get_bd_pins DDR/usb_uart_extra_ctsn] [get_bd_pins DDR/uart_0/CTSn]
+endgroup
+
+
+startgroup
+create_bd_port -dir O usb_uart_extra_rtsn
+connect_bd_net [get_bd_ports usb_uart_extra_rtsn] [get_bd_pins DDR/usb_uart_extra_rtsn]
+endgroup
+startgroup
 create_bd_port -dir O usb_uart_extra_txd
 connect_bd_net [get_bd_pins /DDR/usb_uart_extra_txd] [get_bd_ports usb_uart_extra_txd]
 endgroup
@@ -74,6 +89,11 @@ startgroup
 create_bd_port -dir I usb_uart_extra_rxd
 connect_bd_net [get_bd_pins /DDR/usb_uart_extra_rxd] [get_bd_ports usb_uart_extra_rxd]
 endgroup
+startgroup
+create_bd_port -dir I usb_uart_extra_ctsn
+connect_bd_net [get_bd_ports usb_uart_extra_ctsn] [get_bd_pins DDR/usb_uart_extra_ctsn]
+endgroup
+
 startgroup
 create_bd_port -dir O -from 7 -to 0 leds
 connect_bd_net [get_bd_pins /DDR/leds] [get_bd_ports leds]
