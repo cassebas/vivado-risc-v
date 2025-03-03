@@ -45,8 +45,12 @@ update_module_reference riscv_axi4_passthrough_0_0
 connect_bd_net [get_bd_pins DDR/fiforeader_axilite_0/fifo_empty_i] [get_bd_pins DDR/fifo_generator_0/empty]
 connect_bd_net [get_bd_pins DDR/fiforeader_axilite_0/fifo_dout_i] [get_bd_pins DDR/fifo_generator_0/dout]
 connect_bd_net [get_bd_pins DDR/fiforeader_axilite_0/fifo_rden_o] [get_bd_pins DDR/fifo_generator_0/rd_en]
-connect_bd_net [get_bd_pins DDR/fiforeader_axilite_0/axi4_addr1_o] [get_bd_pins DDR/axi4_passthrough_0/addr1_monitor_i]
-connect_bd_net [get_bd_pins DDR/fiforeader_axilite_0/axi4_addr2_o] [get_bd_pins DDR/axi4_passthrough_0/addr2_monitor_i]
+
+connect_bd_net [get_bd_pins DDR/fiforeader_axilite_0/addr_filter_o] [get_bd_pins DDR/axi4_passthrough_0/addr_filter_i]
+connect_bd_net [get_bd_pins DDR/fiforeader_axilite_0/monitor_en_o] [get_bd_pins DDR/axi4_passthrough_0/monitor_en_i]
+connect_bd_net [get_bd_pins DDR/fiforeader_axilite_0/addr1_monitor_o] [get_bd_pins DDR/axi4_passthrough_0/addr1_monitor_i]
+connect_bd_net [get_bd_pins DDR/fiforeader_axilite_0/addr2_monitor_o] [get_bd_pins DDR/axi4_passthrough_0/addr2_monitor_i]
+
 connect_bd_intf_net [get_bd_intf_pins DDR/fiforeader_axilite_0/M_AXI] [get_bd_intf_pins DDR/uart_0/S_AXI_LITE]
 update_module_reference riscv_fiforeader_axilite_0_0
 

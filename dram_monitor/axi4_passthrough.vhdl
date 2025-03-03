@@ -13,8 +13,28 @@ entity axi4_passthrough is
   port (
     aclk            : in std_logic;
     aresetn         : in std_logic;
+
+    -- Bus analyzer configuration signals
+    --
+    -- monitor enable: enable/disable read/write transactions
+    --   0x00 -> monitor OFF
+    --   0x01 -> monitor read transactions only
+    --   0x10 -> monitor write transactions only
+    --   0x11 -> monitor both read/write transactions
+    monitor_en_i    : in std_logic_vector(1 downto 0);
+    -- address filter: filter transactions on start/end addresses
+    --   0x0  -> filter disabled, all addresses are monitored
+    --   0x1  -> filter enabled, only start en end addresses are monitored
+    addr_filter_i   : in std_logic;
+    -- address monitor start and end addresses
+    --   addr1_monitor_i -> start address to monitor
+    --   addr2_monitor_i -> end address to monitor
     addr1_monitor_i : in std_logic_vector(ADDR_WIDTH-1 downto 0);
     addr2_monitor_i : in std_logic_vector(ADDR_WIDTH-1 downto 0);
+
+    --
+    -- AXI Lite slave ports
+    --
     S00_AXI_awid    : in std_logic_vector(3 downto 0);
     S00_AXI_awaddr  : in std_logic_vector(ADDR_WIDTH-1 downto 0);
     S00_AXI_awlen   : in std_logic_vector(7 downto 0);
@@ -53,6 +73,9 @@ entity axi4_passthrough is
     S00_AXI_rvalid  : out std_logic;
     S00_AXI_rready  : in std_logic;
 
+    --
+    -- AXI Lite master ports
+    --
     M00_AXI_awid    : out std_logic_vector(3 downto 0);
     M00_AXI_awaddr  : out std_logic_vector(ADDR_WIDTH-1 downto 0);
     M00_AXI_awlen   : out std_logic_vector(7 downto 0);
@@ -240,15 +263,25 @@ begin
           -- Handshake for the Read Data channel
 
           if rd_fifo_wren = '0' and fifo_full_i = '0' then
-            rd_fifo_wren <= '1';
+            if monitor_en_i = "01" or monitor_en_i = "11" then
+              if addr_filter_i /= '1' then
+                rd_fifo_wren <= '1';
+              else
+                if S00_AXI_araddr = addr1_monitor_i or
+                  S00_AXI_araddr = addr2_monitor_i then
+                  rd_fifo_wren <= '1';
+                end if;
+              end if;
+            end if;
 
             if M00_AXI_rlast = '1' then
-              -- This is the last transfer of the transaction, raise event_count
-              -- for the next transaction
+              -- This is the last transfer of the transaction, raise
+              -- event_count for the next transaction
               event_count <= event_count + 1;
 
               -- Maybe reset monitor?
-              if S00_AXI_arid = "0010" and S00_AXI_araddr = addr2_monitor_i then
+              if S00_AXI_arid = "0010" and
+                S00_AXI_araddr = addr2_monitor_i then
                 monitor <= '0';
               end if;
             end if;
@@ -259,11 +292,20 @@ begin
           -- Handshake for the Write Data channel
 
           if wr_fifo_wren = '0' and fifo_full_i = '0' then
-            wr_fifo_wren <= '1';
+            if monitor_en_i = "10" or monitor_en_i = "11" then
+              if addr_filter_i /= '1' then
+                wr_fifo_wren <= '1';
+              else
+                if S00_AXI_awaddr = addr1_monitor_i or
+                  S00_AXI_awaddr = addr2_monitor_i then
+                  wr_fifo_wren <= '1';
+                end if;
+              end if;
+            end if;
 
             if S00_AXI_wlast = '1' then
-              -- This is the last transfer of the transaction, raise event_count
-              -- for the next transaction
+              -- This is the last transfer of the transaction, raise
+              -- event_count for the next transaction
               event_count <= event_count + 1;
             end if;
           end if;
@@ -271,10 +313,10 @@ begin
       else -- monitor /= '1'
         -- addr1 has not yet been seen
         if M00_AXI_rvalid = '1' and S00_AXI_rready = '1' then
-          -- addr1 is being requested! This is a read request. Since we were
-          -- not monitoring yet, we don't have to look at the AXI write req
-          -- signals.
           if S00_AXI_arid = "0010" and S00_AXI_araddr = addr1_monitor_i then
+            -- addr1 is being requested! This is a read request. Since we were
+            -- not monitoring yet, we don't have to look at the AXI write req
+            -- signals.
             monitor <= '1';
 
             if rd_fifo_wren = '0' and fifo_full_i = '0' then

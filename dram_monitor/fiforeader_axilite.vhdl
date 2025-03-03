@@ -13,13 +13,30 @@ entity fiforeader_axilite is
     rst_n : in std_logic;
     -- DEBUG leds
     leds : out std_logic_vector(7 downto 0);
-    -- Addresses to monitor in the AXI traffic
-    axi4_addr1_o : out std_logic_vector(ADDR_WIDTH-1 downto 0);
-    axi4_addr2_o : out std_logic_vector(ADDR_WIDTH-1 downto 0);
+
+    -- Bus analyzer configuration signals
+    --
+    -- monitor enable: enable/disable read/write transactions
+    --   0x00 -> monitor OFF
+    --   0x01 -> monitor read transactions only
+    --   0x10 -> monitor write transactions only
+    --   0x11 -> monitor both read/write transactions
+    monitor_en_o    : out std_logic_vector(1 downto 0);
+    -- address filter: filter transactions on start/end addresses
+    --   0x0  -> filter disabled, all addresses are monitored
+    --   0x1  -> filter enabled, only start en end addresses are monitored
+    addr_filter_o   : out std_logic;
+    -- address monitor start and end addresses
+    --   addr1_monitor_o -> start address to monitor
+    --   addr2_monitor_o -> end address to monitor
+    addr1_monitor_o : out std_logic_vector(ADDR_WIDTH-1 downto 0);
+    addr2_monitor_o : out std_logic_vector(ADDR_WIDTH-1 downto 0);
+
     -- FIFO ports
     fifo_empty_i : in std_logic;
     fifo_dout_i  : in std_logic_vector(FIFO_DATA_WIDTH-1 downto 0);
     fifo_rden_o  : out std_logic;
+
     --
     -- AXI Lite master ports
     --
@@ -147,17 +164,24 @@ architecture behaviour of fiforeader_axilite is
   -- Determination of the addresses that must be monitored by AXI passthrough
   --
   -- Default values for the addresses to monitor by the AXI passthrough
-  constant addr1_def : std_logic_vector(ADDR_WIDTH-1 downto 0) := x"00001180";
-  constant addr2_def : std_logic_vector(ADDR_WIDTH-1 downto 0) := x"00001100";
-  signal addr_reg : std_logic_vector((ADDR_WIDTH*2)-1 downto 0);
-  signal addr_tmp : std_logic_vector((ADDR_WIDTH*2)-1 downto 0);
-  signal addr_tmp_ready : std_logic;
+  constant mon_en_def : std_logic_vector(7 downto 0) := x"00";
+  constant flt_en_def : std_logic_vector(7 downto 0) := x"00";
+  constant addr1_def  : std_logic_vector(ADDR_WIDTH-1 downto 0) := x"00001180";
+  constant addr2_def  : std_logic_vector(ADDR_WIDTH-1 downto 0) := x"00001100";
+  signal rcv_reg : std_logic_vector((ADDR_WIDTH*2)-1+16 downto 0);
+  signal rcv_tmp : std_logic_vector((ADDR_WIDTH*2)-1+16 downto 0);
+  signal rcv_tmp_ready : std_logic;
 
-  -- For counting the received bytes we will need 3 bits, because a
-  -- maximum of 8 bytes will be received. (Representing two 32-bit addresses.)
-  signal rx_bytecnt_state, rx_bytecnt_state_nxt : unsigned(2 downto 0);
-  constant RX_B0 : unsigned(2 downto 0) := "000";
-  constant RX_B7 : unsigned(2 downto 0) := "111";
+  -- For counting the received bytes we will need 4 bits, because a
+  -- maximum of 10 bytes will be received.
+  -- The bytes received are:
+  --  B9      -> monitor enable byte
+  --  B8      -> address filter enable byte
+  --  B7 - B4 -> 32-bit address, representing start function address
+  --  B3 - B0 -> 32-bit address, representing end function address
+  signal rx_bytecnt_state, rx_bytecnt_state_nxt : unsigned(3 downto 0);
+  constant RX_B0 : unsigned(3 downto 0) := "0000";
+  constant RX_B9 : unsigned(3 downto 0) := "1001";
   --
   -- AXI Lite signals
   --
@@ -275,7 +299,7 @@ begin
       when READ_RX =>
         -- Only go from READ_RX to WRITE_TX when enough bytes have been read
         if axi_lite_state = AXI_READ_DATA_BUFFER and M_AXI_rvalid = '1' then
-          if rx_bytecnt_state = RX_B7 then
+          if rx_bytecnt_state = RX_B9 then
             -- We have received enough bytes (8), so we can go to
             -- the next state.
             readwrite_state_nxt <= WRITE_TX;
@@ -318,34 +342,36 @@ begin
   end process rx_bytecnt_statemachine_decoder;
 
 
-  rx_bytecnt_output_decoder : process(clk, rst_n) is
-    variable shift          : integer := 0;
-    variable bitmask        : unsigned((ADDR_WIDTH*2)-1 downto 0);
-    variable zero           : std_logic_vector((ADDR_WIDTH*2)-1-8 downto 0);
-    variable inverted_bm    : std_logic_vector((ADDR_WIDTH*2)-1 downto 0);
-    variable rdata_extended : std_logic_vector((ADDR_WIDTH*2)-1 downto 0);
-    variable shifted_byte   : std_logic_vector((ADDR_WIDTH*2)-1 downto 0);
+  -- This process fills a temporary std_logic_vector with the received
+  -- bytes and puts them together in the form of 2 addresses of 4 bytes
+  -- wide (8 bytes in total).
+  -- Each received byte is shifted n*8 bits to the left depending on the
+  -- position of the byte. This way the end result after having received
+  -- 8 bytes is:
+  --  79-72  71-64  63-56  55-48  47-40  39-32  31-24  23-16  15-8  7-0
+  --    B9     B8     B7     B6     B5     B4     B3     B2     B1   B0
+  -- |-mon-||-flt-| |---------addr1---------|   |---------addr2--------|
+  --
+  -- The received bytes are left shifted to their correct position,
+  -- master sends the MSB first.
+  rcv_tmp_register : process(clk, rst_n) is
   begin
     if rst_n = '0' then
-      addr_tmp <= (others => '0');
+      rcv_tmp <= (others => '0');
     elsif rising_edge(clk) then
       if readwrite_state = READ_RX then
         if axi_lite_state = AXI_READ_DATA_BUFFER and M_AXI_rvalid = '1' then
-          shift := to_integer(rx_bytecnt_state) * 8;
+          -- Copy lowest rdata byte into right most byte of rcv_tmp
+          rcv_tmp(rcv_tmp'low+7 downto rcv_tmp'low) <= M_AXI_rdata(7 downto 0);
 
-          bitmask := (7 downto 0 => '1', others => '0');
-          inverted_bm := not std_logic_vector(shift_left(bitmask, shift));
-
-          zero := (others => '0');
-          rdata_extended := zero & M_AXI_rdata(7 downto 0);
-          shifted_byte := std_logic_vector(shift_left(unsigned(rdata_extended),
-                                                      shift));
-
-          addr_tmp <= (addr_tmp and inverted_bm) or shifted_byte;
+          -- Left shift rcv_tmp 8 bits
+          for i in rcv_tmp'high-8 downto rcv_tmp'low loop
+            rcv_tmp(i+8) <= rcv_tmp(i);
+          end loop;
         end if;
       end if;
     end if;
-  end process rx_bytecnt_output_decoder;
+  end process rcv_tmp_register;
 
 
   send_nibble_statemachine_decoder : process(send_nibble_state, axi_lite_state,
@@ -406,7 +432,7 @@ begin
         end if;
       when AXI_READ_DATA_BUFFER =>
         if M_AXI_rvalid = '1' then
-          if rx_bytecnt_state = RX_B7 then
+          if rx_bytecnt_state = RX_B9 then
             -- Now reading last byte, next state back to AXI_IDLE
             axi_lite_state_nxt <= AXI_IDLE;
           else
@@ -549,34 +575,54 @@ begin
   M_AXI_rready <= axi_rready;
 
 
-  addr_register : process(clk, rst_n) is
+  rcv_reg_register : process(clk, rst_n) is
   begin
     if rst_n = '0' then
       -- Default values for the address monitor
-      addr_reg((ADDR_WIDTH*2)-1 downto ADDR_WIDTH) <= addr1_def;
-      addr_reg(ADDR_WIDTH-1 downto 0) <= addr2_def;
-      addr_tmp_ready <= '0';
+      rcv_reg((ADDR_WIDTH*2)-1+16 downto (ADDR_WIDTH*2)+8) <= mon_en_def;
+      rcv_reg((ADDR_WIDTH*2)-1+8 downto (ADDR_WIDTH*2)) <= flt_en_def;
+      rcv_reg((ADDR_WIDTH*2)-1 downto ADDR_WIDTH) <= addr1_def;
+      rcv_reg(ADDR_WIDTH-1 downto 0) <= addr2_def;
+      rcv_tmp_ready <= '0';
     elsif rising_edge(clk) then
       if axi_lite_state = AXI_READ_DATA_BUFFER and M_AXI_rvalid = '1' then
-        if rx_bytecnt_state = RX_B7 then
-          -- Delay copying addr_tmp to addr_reg with 1 clock cycle
-          addr_tmp_ready <= '1';
+        if rx_bytecnt_state = RX_B9 then
+          -- Delay copying rcv_tmp to rcv_reg with 1 clock cycle
+          rcv_tmp_ready <= '1';
         end if;
       end if;
 
-      if addr_tmp_ready = '1' then
-        addr_reg <= addr_tmp;
-        addr_tmp_ready <= '0';
+      if rcv_tmp_ready = '1' then
+        rcv_reg <= rcv_tmp;
+        rcv_tmp_ready <= '0';
       end if;
     end if;
-  end process addr_register;
+  end process rcv_reg_register;
 
-  axi4_addr1_o <= addr_reg((ADDR_WIDTH*2)-1 downto ADDR_WIDTH);
-  axi4_addr2_o <= addr_reg(ADDR_WIDTH-1 downto 0);
 
-  -- Maybe hardcoded for debugging purposes?
-  -- axi4_addr1_o <= addr1_def;
-  -- axi4_addr2_o <= addr2_def;
+  -- The highest 8 bits of the rcv register represent the monitor enable,
+  -- of which the lowest 2 bytes must be put on the output signal.
+  --   79-72
+  --     B9
+  --  |--mon--|
+  monitor_en_o <= rcv_reg((ADDR_WIDTH*2)-1+10 downto (ADDR_WIDTH*2)+8);
+
+  -- The next 8 bits of the rcv register represent the address filter,
+  -- of which the lowest bit must be put on the output signal.
+  --   71-64
+  --     B8
+  --  |--flt--|
+  addr_filter_o <= rcv_reg(ADDR_WIDTH*2);
+
+  -- The high(-16) 32 bits of the rcv register represent the
+  -- addr1 address (start function), the low 32 bits represent
+  -- the addr2 address (end function).
+  --   63-56  55-48  47-40  39-32  31-24  23-16  15-8  7-0
+  --    B7     B6     B5     B4     B3     B2     B1    B0
+  --   |---------addr1---------|   |---------addr2--------|
+  addr1_monitor_o <= rcv_reg((ADDR_WIDTH*2)-1 downto ADDR_WIDTH);
+  addr2_monitor_o <= rcv_reg(ADDR_WIDTH-1 downto 0);
+
 
   -- For debug purposes, put least significant bits on the LEDs
   readwrite_state_led : process(readwrite_state, axi_lite_state,
