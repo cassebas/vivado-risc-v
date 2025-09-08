@@ -142,8 +142,10 @@ architecture behaviour of fiforeader_axilite is
   constant NUL6 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0101110"; -- 46
   constant HEX6 : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "0101111"; -- 47
   -- data (64 bits = 16 nibbles, states 48-63)
-  constant CR   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "1000000"; -- 64
-  constant LF   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "1000001"; -- 65
+  constant LF   : unsigned(NIBBLE_STATE_LEN-1 downto 0) := "1000000"; -- 64
+
+  constant FST_CH : unsigned(NIBBLE_STATE_LEN-1 downto 0) := RWCH;
+  constant LST_CH : unsigned(NIBBLE_STATE_LEN-1 downto 0) := LF;
 
   -- Definition of ascii characters, to denote whether a transfer
   -- was a read transacation or a write transaction.
@@ -181,6 +183,10 @@ architecture behaviour of fiforeader_axilite is
   signal rx_bytecnt_state, rx_bytecnt_state_nxt : unsigned(3 downto 0);
   constant RX_B0 : unsigned(3 downto 0) := "0000";
   constant RX_B9 : unsigned(3 downto 0) := "1001";
+
+  constant RX_BFST : unsigned(3 downto 0) := RX_B0;
+  constant RX_BLST : unsigned(3 downto 0) := RX_B9;
+
   --
   -- AXI Lite signals
   --
@@ -199,7 +205,7 @@ architecture behaviour of fiforeader_axilite is
   signal axi_rready  : std_logic;
 
   -- Read from UART rx buffer: address is 4'h00
-  constant AXI_READ_RXBUFFER_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
+  constant AXI_READ_RXBUF_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
     (others => '0');
   -- Write to UART tx buffer: address is 4'h04
   constant AXI_WRITE_TXBUF_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
@@ -208,7 +214,7 @@ architecture behaviour of fiforeader_axilite is
   constant AXI_READ_STATUS_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
     (3 => '1', others => '0');
   -- Write to UART control register: address is 4'h0c
-  constant AXI_WRITE_CONTROL_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
+  constant AXI_WRITE_CTRL_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
     (3 => '1', 2 => '1', others => '0');
 
 begin
@@ -217,8 +223,8 @@ begin
   begin
     if rst_n = '0' then
       fifo_read_state <= FIFO_IDLE;
-      rx_bytecnt_state <= RX_B0;
-      send_nibble_state <= RWCH;
+      rx_bytecnt_state <= RX_BFST;
+      send_nibble_state <= FST_CH;
       axi_lite_r_state <= AXI_IDLE;
       axi_lite_w_state <= AXI_IDLE;
     elsif rising_edge(clk) then
@@ -246,7 +252,7 @@ begin
         fifo_read_state_nxt <= FIFO_READY;
       when FIFO_READY =>
         if axi_lite_w_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
-          if send_nibble_state = CR then
+          if send_nibble_state = LST_CH then
             if fifo_empty_i = '0' then
               fifo_read_state_nxt <= FIFO_ENABLE;
             else
@@ -295,8 +301,8 @@ begin
     rx_bytecnt_state_nxt <= rx_bytecnt_state;
 
     if axi_lite_r_state = AXI_READ_DATA_BUFFER and M_AXI_rvalid = '1' then
-      if rx_bytecnt_state = RX_B9 then
-        rx_bytecnt_state_nxt <= RX_B0;
+      if rx_bytecnt_state = RX_BLST then
+        rx_bytecnt_state_nxt <= RX_BFST;
       else
         rx_bytecnt_state_nxt <= rx_bytecnt_state + 1;
       end if;
@@ -341,7 +347,7 @@ begin
 
     if axi_lite_w_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
       if send_nibble_state = LF then
-        send_nibble_state_nxt <= RWCH;
+        send_nibble_state_nxt <= FST_CH;
       else
         send_nibble_state_nxt <= send_nibble_state + 1;
       end if;
@@ -376,7 +382,7 @@ begin
         end if;
       when AXI_READ_DATA_BUFFER =>
         if M_AXI_rvalid = '1' then
-          if rx_bytecnt_state = RX_B9 then
+          if rx_bytecnt_state = RX_BLST then
             -- Now reading last byte, next state back to AXI_IDLE
             axi_lite_r_state_nxt <= AXI_IDLE;
           else
@@ -470,7 +476,7 @@ begin
           axi_wdata <= (others => '0');
           axi_wvalid <= '0';
         when AXI_READ_REQ_STATUS =>
-          if send_nibble_state = RWCH then
+          if send_nibble_state = FST_CH then
             -- Only copy fifo_tmp once
             fifo_tmp <= fifo_dreg;
           end if;
@@ -490,8 +496,6 @@ begin
               ascii := "01111000"; -- 'x' (ASCII: 120)
             when SP1 | SP2 | SP3 | SP4 | SP5 | SP6 =>
               ascii := "00100000"; -- ' ' (ASCII: 32)
-            when CR   =>
-              ascii := "00001101"; -- CR (ASCII: 13)
             when LF   =>
               ascii := "00001010"; -- LF (ASCII: 10)
             when others =>
@@ -560,7 +564,7 @@ begin
         axi_araddr <= AXI_READ_STATUS_ADDR;
         axi_arvalid <= '1';
       elsif axi_lite_r_state = AXI_READ_REQ_BUFFER then
-        axi_araddr <= AXI_READ_RXBUFFER_ADDR;
+        axi_araddr <= AXI_READ_RXBUF_ADDR;
         axi_arvalid <= '1';
       elsif (axi_lite_r_state = AXI_READ_DATA_STATUS or
              axi_lite_w_state = AXI_READ_DATA_STATUS or
@@ -628,7 +632,7 @@ begin
       rcv_tmp_ready <= '0';
     elsif rising_edge(clk) then
       if axi_lite_r_state = AXI_READ_DATA_BUFFER and M_AXI_rvalid = '1' then
-        if rx_bytecnt_state = RX_B9 then
+        if rx_bytecnt_state = RX_BLST then
           -- Delay copying rcv_tmp to rcv_reg with 1 clock cycle
           rcv_tmp_ready <= '1';
         end if;
