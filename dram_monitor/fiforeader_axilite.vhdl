@@ -85,6 +85,7 @@ architecture behaviour of fiforeader_axilite is
       when "1101" => return "01100100"; -- 'd' (ASCII: 100)
       when "1110" => return "01100101"; -- 'e' (ASCII: 101)
       when "1111" => return "01100110"; -- 'f' (ASCII: 102)
+      when others => return "00101010"; -- '*' (ASCII: 42)
     end case;
   end function convert_to_ascii;
 
