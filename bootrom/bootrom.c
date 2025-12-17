@@ -171,26 +171,26 @@ static const char * errno_to_str(void) {
 }
 
 #define MAX_BUF 64
-/*
- * Print an integer in hexadecimal format.
- */
-static void print_hex(uintptr_t h, uint8_t n) {
-    // Maxixum digits to print is MAX_BUF-1 digits + \0
-    char buf[MAX_BUF];
-    buf[n] = '\0';
-    char c;
-    while (n--) {
-        c = (char) (h & 0x0F);
-        if (c < 10) {
-            c = c + '0';
-        } else {
-            c = c + 'A' - 10;
-        }
-        buf[n] = c;
-        h >>= 4;
-    }
-    kprintf("%s", buf);
-}
+/* /\* */
+/*  * Print an integer in hexadecimal format. */
+/*  *\/ */
+/* static void print_hex(uintptr_t h, uint8_t n) { */
+/*     // Maxixum digits to print is MAX_BUF-1 digits + \0 */
+/*     char buf[MAX_BUF]; */
+/*     buf[n] = '\0'; */
+/*     char c; */
+/*     while (n--) { */
+/*         c = (char) (h & 0x0F); */
+/*         if (c < 10) { */
+/*             c = c + '0'; */
+/*         } else { */
+/*             c = c + 'A' - 10; */
+/*         } */
+/*         buf[n] = c; */
+/*         h >>= 4; */
+/*     } */
+/*     kprintf("%s", buf); */
+/* } */
 
 static void usleep(unsigned us) {
     uintptr_t cycles0;
@@ -609,13 +609,13 @@ int main(void) {
     while (bss < (uint64_t *)_ebss) *bss++ = 0;
 
     for (;;) {
-        kputs("");
-        kprintf("RISC-V %d, Boot ROM V3.8.1\n", __riscv_xlen);
+        /* kputs(""); */
+        /* kprintf("RISC-V %d, Boot ROM V3.8.1\n", __riscv_xlen); */
 
-        volatile uint32_t *boot_memory = (uint32_t *)0x60050000;
-        kprintf("boot_memory[0] = 0x");
-        print_hex(boot_memory[0], 8);
-        kprintf("\n");
+        /* volatile uint32_t *boot_memory = (uint32_t *)0x60050000; */
+        /* kprintf("boot_memory[0] = 0x"); */
+        /* print_hex(boot_memory[0], 8); */
+        /* kprintf("\n"); */
 
         drv_status = STA_NOINIT;
         errno = br_mount(&fatfs, "", 1);
@@ -625,12 +625,13 @@ int main(void) {
         else {
             if (download() != 0) {
                 kprintf("Cannot read BOOT.ELF: %s\n", errno_to_str());
-            } else {
-                kprintf("Returned from main program.\n");
-            }
+            }/*  else { */
+            /*     kprintf("Returned from main program.\n"); */
+            /* } */
         }
         /* if (fd.obj.fs) br_close(&fd); */
-        usleep(1000000);
+        /* usleep(1000000); */
     }
+
     return 0;
 }
