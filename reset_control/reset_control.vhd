@@ -5,16 +5,16 @@ use ieee.math_real.ceil;
 use ieee.math_real.log2;
 
 
-entity boot_control is
+entity reset_control is
   port (clk          : in std_logic;
         async_resetn : in std_logic;
         cmd_in       : in std_logic_vector(31 downto 0);
         led_out      : out std_logic_vector(7 downto 0);
         cpu_reset    : out std_logic);
-end boot_control;
+end reset_control;
 
 
-architecture behavioral of boot_control is
+architecture behavioral of reset_control is
 
   -- Assume frequency 100 MHz
   constant CLK_FREQ  : integer := 100_000_000;

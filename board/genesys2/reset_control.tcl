@@ -2,22 +2,22 @@ cd [file dirname [file normalize [info script]]]
 open_project ../../workspace/rocket32s1/vivado-genesys2-riscv/genesys2-riscv.xpr
 update_compile_order -fileset sources_1
 open_bd_design {../../workspace/rocket32s1/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/bd/riscv/riscv.bd}
-add_files -norecurse {../../boot_control/boot_control_v1_0.vhd ../../boot_control/boot_control_v1_0_S00_AXI.vhd ../../boot_control/boot_control.vhd}
+add_files -norecurse {../../reset_control/reset_control_v1_0.vhd ../../reset_control/reset_control_v1_0_S00_AXI.vhd ../../reset_control/reset_control.vhd}
 update_compile_order -fileset sources_1
-create_bd_cell -type module -reference boot_control_v1_0 IO/boot_control_v1_0_0
-set_property location {3 954 815} [get_bd_cells IO/boot_control_v1_0_0]
+create_bd_cell -type module -reference reset_control_v1_0 IO/reset_control_v1_0_0
+set_property location {3 954 815} [get_bd_cells IO/reset_control_v1_0_0]
 create_bd_pin -dir O -from 7 -to 0 IO/led_out
 create_bd_pin -dir O IO/cpu_reset
-connect_bd_net [get_bd_pins IO/led_out] [get_bd_pins IO/boot_control_v1_0_0/led_out]
-connect_bd_net [get_bd_pins IO/cpu_reset] [get_bd_pins IO/boot_control_v1_0_0/cpu_reset]
+connect_bd_net [get_bd_pins IO/led_out] [get_bd_pins IO/reset_control_v1_0_0/led_out]
+connect_bd_net [get_bd_pins IO/cpu_reset] [get_bd_pins IO/reset_control_v1_0_0/cpu_reset]
 startgroup
 set_property CONFIG.NUM_MI {5} [get_bd_cells IO/io_axi_s]
 endgroup
-connect_bd_intf_net [get_bd_intf_pins IO/io_axi_s/M04_AXI] [get_bd_intf_pins IO/boot_control_v1_0_0/s00_axi]
-connect_bd_net [get_bd_pins IO/axi_reset] [get_bd_pins IO/boot_control_v1_0_0/s00_axi_aresetn]
-connect_bd_net [get_bd_pins IO/axi_clock] [get_bd_pins IO/boot_control_v1_0_0/s00_axi_aclk]
+connect_bd_intf_net [get_bd_intf_pins IO/io_axi_s/M04_AXI] [get_bd_intf_pins IO/reset_control_v1_0_0/s00_axi]
+connect_bd_net [get_bd_pins IO/axi_reset] [get_bd_pins IO/reset_control_v1_0_0/s00_axi_aresetn]
+connect_bd_net [get_bd_pins IO/axi_clock] [get_bd_pins IO/reset_control_v1_0_0/s00_axi_aclk]
 assign_bd_address
-set_property offset 0x60040000 [get_bd_addr_segs {RocketChip/IO_AXI4/SEG_boot_control_v1_0_0_reg0}]
+set_property offset 0x60040000 [get_bd_addr_segs {RocketChip/IO_AXI4/SEG_reset_control_v1_0_0_reg0}]
 create_bd_port -dir O -from 7 -to 0 led_out
 startgroup
 connect_bd_net [get_bd_ports led_out] [get_bd_pins IO/led_out]

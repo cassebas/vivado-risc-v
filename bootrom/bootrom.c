@@ -170,28 +170,6 @@ static const char * errno_to_str(void) {
     return "Unknown error code";
 }
 
-#define MAX_BUF 64
-/* /\* */
-/*  * Print an integer in hexadecimal format. */
-/*  *\/ */
-/* static void print_hex(uintptr_t h, uint8_t n) { */
-/*     // Maxixum digits to print is MAX_BUF-1 digits + \0 */
-/*     char buf[MAX_BUF]; */
-/*     buf[n] = '\0'; */
-/*     char c; */
-/*     while (n--) { */
-/*         c = (char) (h & 0x0F); */
-/*         if (c < 10) { */
-/*             c = c + '0'; */
-/*         } else { */
-/*             c = c + 'A' - 10; */
-/*         } */
-/*         buf[n] = c; */
-/*         h >>= 4; */
-/*     } */
-/*     kprintf("%s", buf); */
-/* } */
-
 static void usleep(unsigned us) {
     uintptr_t cycles0;
     uintptr_t cycles1;
@@ -465,6 +443,7 @@ static int download(void) {
     uint16_t phentsize = 0;
     uint16_t phnum = 0;
     unsigned i = 0;
+    uintptr_t cycles0, cycles1, cycles2;
 
     errno = br_open(&fd, fnm, FA_READ);
     if (errno) return -1;
@@ -593,9 +572,26 @@ static int download(void) {
         asm volatile ("addi t0, t0, 8");
         asm volatile ("addi t2, t2, 8");
         asm volatile ("bne  t0, t1, boot_rom_memcpy");
+
+        // CT save number of cycles before reading the application's binary
+        asm volatile ("csrr %0, mcycle" : "=r" (cycles1));
+        // CT report cycles spent in download function
+        kprintf("Bootrom cycles download (alt_mem) in function=%ld\n",
+                cycles1 - cycles0);
+        // CT save total number of cycles to t6 register
+        asm volatile ("mv t6, %0" :: "r" (cycles1 - cycles0));
+
         asm volatile ("fence.i" ::: "memory");
         asm volatile ("jalr a5");
     } else {
+        // CT save number of cycles before reading the application's binary
+        asm volatile ("csrr %0, mcycle" : "=r" (cycles1));
+        // CT report cycles spent in download function
+        kprintf("Bootrom cycles download (no alt_mem)  in function=%ld\n",
+                cycles1 - cycles0);
+        // CT save total number of cycles to t6 register
+        asm volatile ("mv t6, %0" :: "r" (cycles1 - cycles0));
+
         asm volatile ("fence.i" ::: "memory");
         asm volatile ("jalr %0" :: "r" (entry_addr));
     }
@@ -609,14 +605,6 @@ int main(void) {
     while (bss < (uint64_t *)_ebss) *bss++ = 0;
 
     for (;;) {
-        /* kputs(""); */
-        /* kprintf("RISC-V %d, Boot ROM V3.8.1\n", __riscv_xlen); */
-
-        /* volatile uint32_t *boot_memory = (uint32_t *)0x60050000; */
-        /* kprintf("boot_memory[0] = 0x"); */
-        /* print_hex(boot_memory[0], 8); */
-        /* kprintf("\n"); */
-
         drv_status = STA_NOINIT;
         errno = br_mount(&fatfs, "", 1);
         if (errno) {
@@ -625,12 +613,8 @@ int main(void) {
         else {
             if (download() != 0) {
                 kprintf("Cannot read BOOT.ELF: %s\n", errno_to_str());
-            }/*  else { */
-            /*     kprintf("Returned from main program.\n"); */
-            /* } */
+            }
         }
-        /* if (fd.obj.fs) br_close(&fd); */
-        /* usleep(1000000); */
     }
 
     return 0;

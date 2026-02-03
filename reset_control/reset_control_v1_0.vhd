@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity boot_module_v1_0 is
+entity reset_control_v1_0 is
 	generic (
 		-- Users to add parameters here
 
@@ -12,19 +12,13 @@ entity boot_module_v1_0 is
 
 		-- Parameters of Axi Slave Bus Interface S00_AXI
 		C_S00_AXI_DATA_WIDTH	: integer	:= 32;
-		C_S00_AXI_ADDR_WIDTH	: integer	:= 16;
-        BRAM_DATA_WIDTH         : integer   := 32;
-        BRAM_ADDR_WIDTH         : integer   := 14
+		C_S00_AXI_ADDR_WIDTH	: integer	:= 4
 	);
 	port (
-      -- Users to add ports here
-      bram_clk_o  : out std_logic;
-      bram_addr_o : out std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
-      bram_data_i : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
-      bram_data_o : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
-      bram_wea_o  : out std_logic_vector(3 downto 0);
-      -- User ports ends
-
+		-- Users to add ports here
+        led_out     : out std_logic_vector(7 downto 0);
+        cpu_reset   : out std_logic;
+		-- User ports ends
 		-- Do not modify the ports beyond this line
 
 
@@ -51,21 +45,19 @@ entity boot_module_v1_0 is
 		s00_axi_rvalid	: out std_logic;
 		s00_axi_rready	: in std_logic
 	);
-end boot_module_v1_0;
+end reset_control_v1_0;
 
-architecture arch_imp of boot_module_v1_0 is
+architecture arch_imp of reset_control_v1_0 is
 
 	-- component declaration
-	component boot_module_v1_0_S00_AXI is
+	component reset_control_v1_0_S00_AXI is
 		generic (
 		C_S_AXI_DATA_WIDTH	: integer	:= 32;
-		C_S_AXI_ADDR_WIDTH	: integer	:= BRAM_ADDR_WIDTH
+		C_S_AXI_ADDR_WIDTH	: integer	:= 4
 		);
 		port (
-          bram_addr_o : out std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
-          bram_data_i : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
-          bram_data_o : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
-          bram_wea_o  : out std_logic_vector(3 downto 0);
+        led_out     : out std_logic_vector(7 downto 0);
+        cpu_reset   : out std_logic;
 
 		S_AXI_ACLK	: in std_logic;
 		S_AXI_ARESETN	: in std_logic;
@@ -89,27 +81,24 @@ architecture arch_imp of boot_module_v1_0 is
 		S_AXI_RVALID	: out std_logic;
 		S_AXI_RREADY	: in std_logic
 		);
-	end component boot_module_v1_0_S00_AXI;
-
-	constant LSB_ADDR_BIT  : integer := (C_S00_AXI_DATA_WIDTH/32) + 1;
+	end component reset_control_v1_0_S00_AXI;
 
 begin
 
 -- Instantiation of Axi Bus Interface S00_AXI
-boot_module_v1_0_S00_AXI_inst : boot_module_v1_0_S00_AXI
+reset_control_v1_0_S00_AXI_inst : reset_control_v1_0_S00_AXI
 	generic map (
 		C_S_AXI_DATA_WIDTH	=> C_S00_AXI_DATA_WIDTH,
-		C_S_AXI_ADDR_WIDTH	=> BRAM_ADDR_WIDTH
+		C_S_AXI_ADDR_WIDTH	=> C_S00_AXI_ADDR_WIDTH
 	)
 	port map (
-      bram_addr_o => bram_addr_o,
-      bram_data_i => bram_data_i,
-      bram_data_o => bram_data_o,
-      bram_wea_o => bram_wea_o,
-
+        -- User ports
+        led_out         => led_out,
+        cpu_reset       => cpu_reset,
+        -- Generated ports
 		S_AXI_ACLK	=> s00_axi_aclk,
 		S_AXI_ARESETN	=> s00_axi_aresetn,
-		S_AXI_AWADDR	=> s00_axi_awaddr(C_S00_AXI_ADDR_WIDTH-1 downto LSB_ADDR_BIT),
+		S_AXI_AWADDR	=> s00_axi_awaddr,
 		S_AXI_AWPROT	=> s00_axi_awprot,
 		S_AXI_AWVALID	=> s00_axi_awvalid,
 		S_AXI_AWREADY	=> s00_axi_awready,
@@ -120,7 +109,7 @@ boot_module_v1_0_S00_AXI_inst : boot_module_v1_0_S00_AXI
 		S_AXI_BRESP	=> s00_axi_bresp,
 		S_AXI_BVALID	=> s00_axi_bvalid,
 		S_AXI_BREADY	=> s00_axi_bready,
-		S_AXI_ARADDR	=> s00_axi_araddr(C_S00_AXI_ADDR_WIDTH-1 downto LSB_ADDR_BIT),
+		S_AXI_ARADDR	=> s00_axi_araddr,
 		S_AXI_ARPROT	=> s00_axi_arprot,
 		S_AXI_ARVALID	=> s00_axi_arvalid,
 		S_AXI_ARREADY	=> s00_axi_arready,
@@ -131,7 +120,7 @@ boot_module_v1_0_S00_AXI_inst : boot_module_v1_0_S00_AXI
 	);
 
 	-- Add user logic here
-    bram_clk_o <= s00_axi_aclk;
+
 	-- User logic ends
 
 end arch_imp;
