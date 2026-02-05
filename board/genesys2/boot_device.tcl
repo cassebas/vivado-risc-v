@@ -1,5 +1,5 @@
 set core_config $::env(CONFIG)
-puts "dram_monitor.tcl: using core configuration ${core_config}"
+puts "boot_device.tcl: using core configuration ${core_config}"
 
 open_project workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.xpr
 update_compile_order -fileset sources_1
@@ -7,7 +7,7 @@ update_compile_order -fileset sources_1
 create_ip -name blk_mem_gen -vendor xilinx.com -library ip -version 8.4 -module_name blk_mem_gen_0
 set_property -dict [list \
   CONFIG.Byte_Size {8} \
-  CONFIG.Coe_File {boot_device/bsort.coe} \
+  CONFIG.Coe_File {/home/caspar/local/git/rts-exec-dist-exp/platform/vivado-risc-v/boot_device/bsort.coe} \
   CONFIG.Enable_A {Always_Enabled} \
   CONFIG.Fill_Remaining_Memory_Locations {true} \
   CONFIG.Load_Init_File {true} \
@@ -15,7 +15,6 @@ set_property -dict [list \
   CONFIG.Use_Byte_Write_Enable {true} \
   CONFIG.Write_Depth_A {16384} \
   CONFIG.Write_Width_A {32} \
-  CONFIG.use_bram_block {Stand_Alone} \
 ] [get_ips blk_mem_gen_0]
 generate_target {instantiation_template} [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_0/blk_mem_gen_0.xci]
 generate_target all [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_0/blk_mem_gen_0.xci]
@@ -31,7 +30,8 @@ export_simulation -of_objects [get_files workspace/${core_config}/vivado-genesys
 add_files -norecurse {boot_device/boot_device.vhd boot_device/boot_device_axislave.vhd boot_device/boot_device_bootcode.vhd boot_device/blk_mem_gen_0.vhd}
 update_compile_order -fileset sources_1
 
-open_bd_design {workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/bd/riscv/riscv.bd}
+open_bd_design {/home/caspar/local/git/rts-exec-dist-exp/platform/vivado-risc-v/workspace/rocket32s1/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/bd/riscv/riscv.bd}
+# open_bd_design {/home/caspar/local/git/rts-exec-dist-exp/platform/vivado-risc-v/workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/bd/riscv/riscv.bd}
 create_bd_cell -type module -reference boot_device IO/boot_device_0
 startgroup
 set_property CONFIG.NUM_MI {6} [get_bd_cells IO/io_axi_s]
