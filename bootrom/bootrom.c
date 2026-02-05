@@ -443,7 +443,10 @@ static int download(void) {
     uint16_t phentsize = 0;
     uint16_t phnum = 0;
     unsigned i = 0;
-    uintptr_t cycles0, cycles1, cycles2;
+    uintptr_t cycles0, cycles1;
+
+    // CT save number of cycles before reading the application's binary
+    asm volatile ("csrr %0, mcycle" : "=r" (cycles0));
 
     errno = br_open(&fd, fnm, FA_READ);
     if (errno) return -1;
@@ -573,24 +576,20 @@ static int download(void) {
         asm volatile ("addi t2, t2, 8");
         asm volatile ("bne  t0, t1, boot_rom_memcpy");
 
-        // CT save number of cycles before reading the application's binary
+        // CT save number of cycles after reading the application's binary
         asm volatile ("csrr %0, mcycle" : "=r" (cycles1));
         // CT report cycles spent in download function
         kprintf("Bootrom cycles download (alt_mem) in function=%ld\n",
                 cycles1 - cycles0);
-        // CT save total number of cycles to t6 register
-        asm volatile ("mv t6, %0" :: "r" (cycles1 - cycles0));
 
         asm volatile ("fence.i" ::: "memory");
         asm volatile ("jalr a5");
     } else {
-        // CT save number of cycles before reading the application's binary
+        // CT save number of cycles after reading the application's binary
         asm volatile ("csrr %0, mcycle" : "=r" (cycles1));
         // CT report cycles spent in download function
         kprintf("Bootrom cycles download (no alt_mem)  in function=%ld\n",
                 cycles1 - cycles0);
-        // CT save total number of cycles to t6 register
-        asm volatile ("mv t6, %0" :: "r" (cycles1 - cycles0));
 
         asm volatile ("fence.i" ::: "memory");
         asm volatile ("jalr %0" :: "r" (entry_addr));
