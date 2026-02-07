@@ -4,10 +4,13 @@ puts "boot_device.tcl: using core configuration ${core_config}"
 open_project workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.xpr
 update_compile_order -fileset sources_1
 
+set project_dir [get_property DIRECTORY [current_project]]
+puts "boot_device.tcl: project directory is ${project_dir}"
+
 create_ip -name blk_mem_gen -vendor xilinx.com -library ip -version 8.4 -module_name blk_mem_gen_0
 set_property -dict [list \
   CONFIG.Byte_Size {8} \
-  CONFIG.Coe_File {/home/caspar/local/git/rts-exec-dist-exp/platform/vivado-risc-v/boot_device/bsort.coe} \
+  CONFIG.Coe_File ${project_dir}/../../../boot_device/bsort.coe \
   CONFIG.Enable_A {Always_Enabled} \
   CONFIG.Fill_Remaining_Memory_Locations {true} \
   CONFIG.Load_Init_File {true} \
@@ -30,8 +33,7 @@ export_simulation -of_objects [get_files workspace/${core_config}/vivado-genesys
 add_files -norecurse {boot_device/boot_device.vhd boot_device/boot_device_axislave.vhd boot_device/boot_device_bootcode.vhd boot_device/blk_mem_gen_0.vhd}
 update_compile_order -fileset sources_1
 
-open_bd_design {/home/caspar/local/git/rts-exec-dist-exp/platform/vivado-risc-v/workspace/rocket32s1/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/bd/riscv/riscv.bd}
-# open_bd_design {/home/caspar/local/git/rts-exec-dist-exp/platform/vivado-risc-v/workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/bd/riscv/riscv.bd}
+open_bd_design ${project_dir}/genesys2-riscv.srcs/sources_1/bd/riscv/riscv.bd
 create_bd_cell -type module -reference boot_device IO/boot_device_0
 startgroup
 set_property CONFIG.NUM_MI {6} [get_bd_cells IO/io_axi_s]
