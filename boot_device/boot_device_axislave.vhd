@@ -10,17 +10,18 @@ entity boot_device_axislave is
 		-- User parameters ends
 		-- Do not modify the parameters beyond this line
 
-		-- Width of S_AXI data bus
-		C_S_AXI_DATA_WIDTH	: integer	:= 32;
-		-- Width of S_AXI address bus
-		C_S_AXI_ADDR_WIDTH	: integer	:= 14
+		-- Width of AXI data bus
+		BD_AXISLAVE_DATA_WIDTH : integer := 32;
+		-- Width of AXI address bus
+		BD_AXISLAVE_ADDR_WIDTH : integer := 14;
+		BD_AXISLAVE_WEA_WIDTH  : integer := 4
 	);
 	port (
       -- Users to add ports here
-      bram_addr_o : out std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
-      bram_data_i : in std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
-      bram_data_o : out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
-      bram_wea_o  : out std_logic_vector(3 downto 0);
+      axislave_addr_o : out std_logic_vector(BD_AXISLAVE_ADDR_WIDTH-1 downto 0);
+      axislave_data_i : in std_logic_vector(BD_AXISLAVE_DATA_WIDTH-1 downto 0);
+      axislave_data_o : out std_logic_vector(BD_AXISLAVE_DATA_WIDTH-1 downto 0);
+      axislave_wea_o  : out std_logic_vector(BD_AXISLAVE_WEA_WIDTH-1 downto 0);
       -- User ports ends
 
 		-- Do not modify the ports beyond this line
@@ -30,7 +31,7 @@ entity boot_device_axislave is
 		-- Global Reset Signal. This Signal is Active LOW
 		S_AXI_ARESETN	: in std_logic;
 		-- Write address (issued by master, acceped by Slave)
-		S_AXI_AWADDR	: in std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
+		S_AXI_AWADDR	: in std_logic_vector(BD_AXISLAVE_ADDR_WIDTH-1 downto 0);
 		-- Write channel Protection type. This signal indicates the
     		-- privilege and security level of the transaction, and whether
     		-- the transaction is a data access or an instruction access.
@@ -42,11 +43,11 @@ entity boot_device_axislave is
     		-- to accept an address and associated control signals.
 		S_AXI_AWREADY	: out std_logic;
 		-- Write data (issued by master, acceped by Slave) 
-		S_AXI_WDATA	: in std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+		S_AXI_WDATA	: in std_logic_vector(BD_AXISLAVE_DATA_WIDTH-1 downto 0);
 		-- Write strobes. This signal indicates which byte lanes hold
     		-- valid data. There is one write strobe bit for each eight
     		-- bits of the write data bus.    
-		S_AXI_WSTRB	: in std_logic_vector((C_S_AXI_DATA_WIDTH/8)-1 downto 0);
+		S_AXI_WSTRB	: in std_logic_vector((BD_AXISLAVE_DATA_WIDTH/8)-1 downto 0);
 		-- Write valid. This signal indicates that valid write
     		-- data and strobes are available.
 		S_AXI_WVALID	: in std_logic;
@@ -63,7 +64,7 @@ entity boot_device_axislave is
     		-- can accept a write response.
 		S_AXI_BREADY	: in std_logic;
 		-- Read address (issued by master, acceped by Slave)
-		S_AXI_ARADDR	: in std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
+		S_AXI_ARADDR	: in std_logic_vector(BD_AXISLAVE_ADDR_WIDTH-1 downto 0);
 		-- Protection type. This signal indicates the privilege
     		-- and security level of the transaction, and whether the
     		-- transaction is a data access or an instruction access.
@@ -75,7 +76,7 @@ entity boot_device_axislave is
     		-- ready to accept an address and associated control signals.
 		S_AXI_ARREADY	: out std_logic;
 		-- Read data (issued by slave)
-		S_AXI_RDATA	: out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+		S_AXI_RDATA	: out std_logic_vector(BD_AXISLAVE_DATA_WIDTH-1 downto 0);
 		-- Read response. This signal indicates the status of the
     		-- read transfer.
 		S_AXI_RRESP	: out std_logic_vector(1 downto 0);
@@ -91,36 +92,29 @@ end boot_device_axislave;
 architecture arch_imp of boot_device_axislave is
 
 	-- AXI4LITE signals
-	signal axi_awaddr	: std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
+	signal axi_awaddr	: std_logic_vector(BD_AXISLAVE_ADDR_WIDTH-1 downto 0);
 	signal axi_awready	: std_logic;
 	signal axi_wready	: std_logic;
 	signal axi_bresp	: std_logic_vector(1 downto 0);
 	signal axi_bvalid	: std_logic;
-	-- signal axi_araddr	: std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
+	-- signal axi_araddr	: std_logic_vector(BD_AXISLAVE_DATA_WIDTH-1 downto 0);
 	signal axi_arready	: std_logic;
-	signal axi_rdata	: std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+	signal axi_rdata	: std_logic_vector(BD_AXISLAVE_DATA_WIDTH-1 downto 0);
 	signal axi_rresp	: std_logic_vector(1 downto 0);
 	signal axi_rvalid	: std_logic;
 
-	-- Example-specific design signals
-	-- local parameter for addressing 32 bit / 64 bit C_S_AXI_DATA_WIDTH
-	-- ADDR_LSB is used for addressing 32/64 bit registers/memories
-	-- ADDR_LSB = 2 for 32 bits (n downto 2)
-	-- ADDR_LSB = 3 for 64 bits (n downto 3)
-	constant ADDR_LSB  : integer := (C_S_AXI_DATA_WIDTH/32)+ 1;
-	constant OPT_MEM_ADDR_BITS : integer := 1;
 	------------------------------------------------
 	---- Signals for user logic register space example
 	--------------------------------------------------
 	---- Number of Slave Registers 4
-	signal slv_reg0	:std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
-	signal slv_reg1	:std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
-	signal slv_reg2	:std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
-	signal slv_reg3	:std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+	signal slv_reg0	:std_logic_vector(BD_AXISLAVE_DATA_WIDTH-1 downto 0);
+	signal slv_reg1	:std_logic_vector(BD_AXISLAVE_DATA_WIDTH-1 downto 0);
+	signal slv_reg2	:std_logic_vector(BD_AXISLAVE_DATA_WIDTH-1 downto 0);
+	signal slv_reg3	:std_logic_vector(BD_AXISLAVE_DATA_WIDTH-1 downto 0);
 	-- signal slv_reg_rden	: std_logic;
 	signal slv_reg_wren	: std_logic;
-	signal bram_rdata	:std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
-	signal bram_wdata	:std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+	signal bram_rdata	:std_logic_vector(BD_AXISLAVE_DATA_WIDTH-1 downto 0);
+	signal bram_wdata	:std_logic_vector(BD_AXISLAVE_DATA_WIDTH-1 downto 0);
 	signal byte_index	: integer;
 	signal aw_en	: std_logic;
 
@@ -129,8 +123,8 @@ architecture arch_imp of boot_device_axislave is
     signal bram_waddr_ready : std_logic;
     signal bram_rdata_ready : std_logic;
     signal bram_wdata_ready : std_logic;
-    signal bram_addr        : std_logic_vector(C_S_AXI_ADDR_WIDTH-1 downto 0);
-    signal bram_wea         : std_logic_vector((C_S_AXI_DATA_WIDTH/8)-1 downto 0);
+    signal bram_addr        : std_logic_vector(BD_AXISLAVE_ADDR_WIDTH-1 downto 0);
+    signal bram_wea         : std_logic_vector(BD_AXISLAVE_WEA_WIDTH-1 downto 0);
 
 begin
 	-- I/O Connections assignments
@@ -277,9 +271,9 @@ begin
 	end process;
 
 
-    bram_addr_o <= bram_addr;
-    bram_data_o <= bram_wdata;
-    bram_wea_o <= bram_wea;
+    axislave_addr_o <= bram_addr;
+    axislave_data_o <= bram_wdata;
+    axislave_wea_o <= bram_wea;
 
     -- bram_rdata
     -- bram_rdata_ready
@@ -296,7 +290,7 @@ begin
           if delay_signal > 0 then
             delay_signal := delay_signal - 1;
             if delay_signal = 0 then
-              bram_rdata <= bram_data_i;
+              bram_rdata <= axislave_data_i;
               bram_rdata_ready <= '1';
             end if;
           elsif bram_raddr_ready = '1' then
