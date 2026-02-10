@@ -18,6 +18,7 @@ set_property -dict [list \
   CONFIG.Use_Byte_Write_Enable {true} \
   CONFIG.Write_Depth_A {16384} \
   CONFIG.Write_Width_A {32} \
+  CONFIG.use_bram_block {Stand_Alone} \
 ] [get_ips blk_mem_gen_0]
 generate_target {instantiation_template} [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_0/blk_mem_gen_0.xci]
 generate_target all [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_0/blk_mem_gen_0.xci]
