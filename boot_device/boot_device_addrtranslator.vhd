@@ -30,11 +30,19 @@ begin
   tr_app_addr_o <= tr_addr_i;
   tr_app_data_o <= tr_data_i;
 
-  tr_input_wea_o <= (others => '0');
-  tr_input_addr_o <= (others => '0');
-  tr_input_data_o <= (others => '0');
+  tr_input_wea_o <= tr_wea_i;
+  tr_input_addr_o <= tr_addr_i;
+  tr_input_data_o <= tr_data_i;
 
-  -- Select first Block RAM's output ('0' => blk_mem_gen_0, '1' => blk_mem_gen_1)
-  bram_mux_ctrl <= '0';
+  -- Select one of the Block RAMs' output ('0' => blk_mem_gen_0, '1' => blk_mem_gen_1)
+  mux_ctrl_proc : process(tr_addr_i) is
+  begin
+    if tr_addr_i(13) = '1' and tr_addr_i(12) = '1' then
+      -- Must be the bootnum parameter 0x60053F00
+      bram_mux_ctrl <= '1';
+    else
+      bram_mux_ctrl <= '0';
+    end if;
+  end process mux_ctrl_proc;
 
 end architecture;
