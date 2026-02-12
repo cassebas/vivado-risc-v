@@ -8,6 +8,7 @@ entity boot_device_bootcode is
            BRAM_WEA_WIDTH  : integer := 4);
 
   port (bootcode_clk    : in std_logic;
+        bootcode_rst_n  : in std_logic;
         bootcode_wea_i  : in std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
         bootcode_addr_i : in std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
         bootcode_data_i : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
@@ -25,6 +26,7 @@ architecture structural of boot_device_bootcode is
 
   component boot_device_addrtranslator is
     port (clk             : in std_logic;
+          rst_n           : in std_logic;
           tr_wea_i        : in std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
           tr_addr_i       : in std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
           tr_data_i       : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
@@ -57,6 +59,7 @@ begin
 
   boot_dev_addrtranslator_0 : boot_device_addrtranslator
     port map (clk => bootcode_clk,
+              rst_n => bootcode_rst_n,
               tr_wea_i => bootcode_wea_i,
               tr_addr_i => bootcode_addr_i,
               tr_data_i => bootcode_data_i,

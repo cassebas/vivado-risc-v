@@ -1,13 +1,19 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 
 entity boot_device_addrtranslator is
   generic (BRAM_DATA_WIDTH : integer := 32;
            BRAM_ADDR_WIDTH : integer := 14;
-           BRAM_WEA_WIDTH  : integer := 4);
+           BRAM_WEA_WIDTH  : integer := 4;
+
+           INPUT_IDX_LEN   : integer := 16;
+           INPUT_IDX_LO    : integer := 16#600505BB#;
+           INPUT_IDX_HI    : integer := 16#600505CB# - 1);
 
   port (clk             : in std_logic;
+        rst_n           : in std_logic;
         tr_wea_i        : in std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
         tr_addr_i       : in std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
         tr_data_i       : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
@@ -23,7 +29,22 @@ end entity boot_device_addrtranslator;
 
 architecture structural of boot_device_addrtranslator is
 
+  signal addr_idx_input : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
+
+  signal count : unsigned(15 downto 0);
+
 begin
+
+  count_runs : process (clk, rst_n) is
+  begin
+    if rst_n = '0' then
+      count <= (others => '0');
+    elsif rising_edge(clk) then
+      if INPUT_IDX_LO <= addr_idx_input and addr_idx_input <= INPUT_IDX_HI then
+        count <= count + 1;
+      end if;
+    end if;
+  end process count_runs;
 
   -- For now hardcoded passthrough of signals to app's block ram
   tr_app_wea_o <= tr_wea_i;
@@ -34,14 +55,20 @@ begin
   tr_input_addr_o <= tr_addr_i;
   tr_input_data_o <= tr_data_i;
 
+  -- Convert the incoming address from std_logic_vector to unsigned
+  addr_idx_input <= unsigned(tr_addr_i);
+
   -- Select one of the Block RAMs' output ('0' => blk_mem_gen_0, '1' => blk_mem_gen_1)
+  -- Index of array of input numbers resides (for now) hard coded in the array
   mux_ctrl_proc : process(tr_addr_i) is
   begin
-    if tr_addr_i(13) = '1' and tr_addr_i(12) = '1' then
-      -- Must be the bootnum parameter 0x60053F00
-      bram_mux_ctrl <= '1';
-    else
-      bram_mux_ctrl <= '0';
+    bram_mux_ctrl <= '0';
+
+    if INPUT_IDX_LO <= addr_idx_input and addr_idx_input <= INPUT_IDX_HI then
+      -- Must be the input data located between 0x600505BB and 0x600505CB-1
+      if count > 0 then
+        bram_mux_ctrl <= '1';
+      end if;
     end if;
   end process mux_ctrl_proc;
 

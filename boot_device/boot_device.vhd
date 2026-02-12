@@ -98,6 +98,7 @@ architecture behavior of boot_device is
              BRAM_ADDR_WIDTH : integer);
 
     port (bootcode_clk    : in std_logic;
+          bootcode_rst_n  : in std_logic;
           bootcode_wea_i  : in std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
           bootcode_addr_i : in std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
           bootcode_data_i : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
@@ -145,6 +146,7 @@ begin
                  BRAM_ADDR_WIDTH => BRAM_ADDR_WIDTH)
 
     port map (bootcode_clk    => s00_axi_aclk,
+              bootcode_rst_n  => s00_axi_aresetn,
               bootcode_wea_i  => wea,
               bootcode_addr_i => addr,
               bootcode_data_i => data_write,
