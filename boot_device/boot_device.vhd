@@ -8,7 +8,9 @@ entity boot_device is
   generic (S_AXI_DATA_WIDTH : integer   := 32;
            S_AXI_ADDR_WIDTH : integer   := 16);
 
-  port (S00_AXI_aclk    : in std_logic;  --  AXI clock
+  port (cpu_reset       : in std_logic;  --  CPU reset, active low
+
+        S00_AXI_aclk    : in std_logic;  --  AXI clock
         S00_AXI_aresetn : in std_logic;  --  AXI reset, active low
 
         -- -----------------------------
@@ -149,7 +151,7 @@ begin
                  BRAM_ADDR_WIDTH => BRAM_ADDR_WIDTH)
 
     port map (bootcode_clk    => s00_axi_aclk,
-              bootcode_rst_n  => s00_axi_aresetn,
+              bootcode_rst_n  => cpu_reset,
               bootcode_wea_i  => wea,
               bootcode_addr_i => addr,
               bootcode_data_i => data_write,

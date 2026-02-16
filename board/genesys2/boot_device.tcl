@@ -68,6 +68,7 @@ endgroup
 connect_bd_intf_net [get_bd_intf_pins IO/io_axi_s/M05_AXI] -boundary_type upper [get_bd_intf_pins IO/boot_device_0/S00_AXI]
 connect_bd_net [get_bd_pins IO/axi_clock] [get_bd_pins IO/boot_device_0/S00_AXI_aclk]
 connect_bd_net [get_bd_pins IO/axi_reset] [get_bd_pins IO/boot_device_0/S00_AXI_aresetn]
+connect_bd_net [get_bd_pins IO/reset_control_v1_0_0/cpu_reset] [get_bd_pins IO/boot_device_0/cpu_reset]
 assign_bd_address [get_bd_addr_segs {IO/boot_device_0/S00_AXI/reg0}]
 set_property offset 0x60050000 [get_bd_addr_segs {RocketChip/IO_AXI4/SEG_boot_device_0_reg0}]
 set_property range 64K [get_bd_addr_segs {RocketChip/IO_AXI4/SEG_boot_device_0_reg0}]
