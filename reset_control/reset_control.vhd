@@ -46,6 +46,8 @@ begin
       state <= IDLE;
       cpu_reset <= '1';
     elsif rising_edge(clk) then
+      cpu_reset <= '1';
+
       if clk_div_cnt = CLK_DIV then
         clk_div_cnt <= (others => '0');
         state <= state_n;

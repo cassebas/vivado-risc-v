@@ -31,10 +31,13 @@ end entity boot_device_addrtranslator;
 architecture structural of boot_device_addrtranslator is
 
   signal addr_idx_input  : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
-  signal addr_idx_offset : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
+  signal addr_idx_offset : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (others => '0');
+  signal addr_idx_next   : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
   signal addr_idx_new    : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
 
-  constant BLOCK_SIZE : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := "00000000000010";
+  -- Block size is 16
+  constant BLOCK_SIZE : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (4 => '1',
+                                                                 others => '0');
 
 begin
 
@@ -46,25 +49,22 @@ begin
   tr_input_addr_o <= std_logic_vector(addr_idx_new);
   tr_input_data_o <= tr_data_i;
 
-  -- Convert the incoming address from std_logic_vector to unsigned
-  addr_idx_input <= unsigned(tr_addr_i);
-  addr_idx_new <= addr_idx_input + addr_idx_offset;
+  addr_idx_new <= addr_idx_input - INPUT_IDX_LO + addr_idx_offset;
+  addr_idx_next <= addr_idx_offset + BLOCK_SIZE;
 
-  compute_offset : process (clk, rst_n) is
+  compute_offset : process (clk) is
   begin
-    if rst_n = '0' then
-      addr_idx_offset <= (others => '0');
-    elsif rising_edge(clk) then
-      if tr_event_i = '1' then
-        if addr_idx_input = INPUT_IDX_HI + 1 then
-          addr_idx_offset <= addr_idx_offset + BLOCK_SIZE;
-        end if;
+    if rising_edge(clk) then
+      if rst_n = '0' then
+        addr_idx_offset <= addr_idx_next;
       end if;
     end if;
   end process compute_offset;
 
+  addr_idx_input <= unsigned(tr_addr_i);
+
   -- Select one of the Block RAMs' output ('0' => blk_mem_gen_0, '1' => blk_mem_gen_1)
-  mux_ctrl_proc : process(tr_addr_i) is
+  mux_ctrl_proc : process(addr_idx_input) is
   begin
     if INPUT_IDX_LO <= addr_idx_input and addr_idx_input <= INPUT_IDX_HI then
       -- Must be the input data located between 0x600505BB and 0x600505CB-1
