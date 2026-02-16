@@ -22,6 +22,8 @@ entity boot_device_axislave is
       axislave_data_i : in std_logic_vector(BD_AXISLAVE_DATA_WIDTH-1 downto 0);
       axislave_data_o : out std_logic_vector(BD_AXISLAVE_DATA_WIDTH-1 downto 0);
       axislave_wea_o  : out std_logic_vector(BD_AXISLAVE_WEA_WIDTH-1 downto 0);
+
+      axislave_ev_o   : out std_logic;
       -- User ports ends
 
 		-- Do not modify the ports beyond this line
@@ -118,13 +120,16 @@ architecture arch_imp of boot_device_axislave is
 	signal byte_index	: integer;
 	signal aw_en	: std_logic;
 
-    constant BRAM_DELAY     : natural := 2;
+    constant BRAM_DELAY     : natural := 4;
     signal bram_raddr_ready : std_logic;
     signal bram_waddr_ready : std_logic;
     signal bram_rdata_ready : std_logic;
     signal bram_wdata_ready : std_logic;
     signal bram_addr        : std_logic_vector(BD_AXISLAVE_ADDR_WIDTH-1 downto 0);
     signal bram_wea         : std_logic_vector(BD_AXISLAVE_WEA_WIDTH-1 downto 0);
+
+    signal event       : std_logic;
+    signal axislave_ev : std_logic;
 
 begin
 	-- I/O Connections assignments
@@ -137,6 +142,35 @@ begin
 	S_AXI_RDATA	<= axi_rdata;
 	S_AXI_RRESP	<= axi_rresp;
 	S_AXI_RVALID	<= axi_rvalid;
+
+    event_proc : process (S_AXI_ACLK, S_AXI_ARESETN) is
+    begin
+      if S_AXI_ARESETN = '0' then
+        event <= '0';
+      elsif rising_edge(S_AXI_ACLK) then
+        if event = '0' and S_AXI_ARVALID = '1' then
+          event <= '1';
+        elsif event = '1' and S_AXI_RREADY = '1' then
+          event <= '0';
+        end if;
+      end if;
+    end process event_proc;
+
+    event_output_proc : process(S_AXI_ACLK, S_AXI_ARESETN) is
+    begin
+      if S_AXI_ARESETN = '0' then
+        axislave_ev <= '0';
+      elsif rising_edge(S_AXI_ACLK) then
+        if event = '0' and S_AXI_ARVALID = '1' then
+          axislave_ev <= '1';
+        else
+          axislave_ev <= '0';
+        end if;
+      end if;
+    end process event_output_proc;
+
+    axislave_ev_o <= axislave_ev;
+
 
 	-- -- Implement axi_awready generation
 	-- -- axi_awready is asserted for one S_AXI_ACLK clock cycle when both

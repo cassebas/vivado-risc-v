@@ -91,6 +91,7 @@ architecture behavior of boot_device is
   signal addr       : std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
   signal data_write : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
   signal data_read  : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+  signal event      : std_logic;
 
   -- Component declarations
   component boot_device_bootcode is
@@ -102,7 +103,8 @@ architecture behavior of boot_device is
           bootcode_wea_i  : in std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
           bootcode_addr_i : in std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
           bootcode_data_i : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
-          bootcode_data_o : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0));
+          bootcode_data_o : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+          bootcode_ev_i   : in std_logic);
   end component boot_device_bootcode;
 
   component boot_device_axislave is
@@ -114,6 +116,7 @@ architecture behavior of boot_device is
           axislave_data_i : in std_logic_vector(BD_AXISLAVE_DATA_WIDTH-1 downto 0);
           axislave_data_o : out std_logic_vector(BD_AXISLAVE_DATA_WIDTH-1 downto 0);
           axislave_wea_o  : out std_logic_vector(BD_AXISLAVE_WEA_WIDTH-1 downto 0);
+          axislave_ev_o   : out std_logic;
 
           S_AXI_aclk    : in std_logic;
           S_AXI_aresetn : in std_logic;
@@ -150,7 +153,8 @@ begin
               bootcode_wea_i  => wea,
               bootcode_addr_i => addr,
               bootcode_data_i => data_write,
-              bootcode_data_o => data_read);
+              bootcode_data_o => data_read,
+              bootcode_ev_i   => event);
 
   boot_device_axislave_inst : boot_device_axislave
     generic map (BD_AXISLAVE_DATA_WIDTH => S_AXI_DATA_WIDTH,
@@ -161,6 +165,7 @@ begin
               axislave_data_i => data_read,
               axislave_data_o => data_write,
               axislave_wea_o  => wea,
+              axislave_ev_o   => event,
 
               S_AXI_aclk    => s00_axi_aclk,
               S_AXI_aresetn => s00_axi_aresetn,

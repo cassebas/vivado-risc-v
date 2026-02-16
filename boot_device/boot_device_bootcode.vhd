@@ -12,7 +12,8 @@ entity boot_device_bootcode is
         bootcode_wea_i  : in std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
         bootcode_addr_i : in std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
         bootcode_data_i : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
-        bootcode_data_o : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0));
+        bootcode_data_o : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+        bootcode_ev_i   : in std_logic);
 end entity boot_device_bootcode;
 
 
@@ -36,7 +37,8 @@ architecture structural of boot_device_bootcode is
           tr_input_wea_o  : out std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
           tr_input_addr_o : out std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
           tr_input_data_o : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
-          bram_mux_ctrl   : out std_logic);
+          bram_mux_ctrl   : out std_logic;
+          tr_event_i      : in std_logic);
   end component;
 
   component blk_mem_gen_0
@@ -69,7 +71,8 @@ begin
               tr_input_wea_o => input_wea,
               tr_input_addr_o => input_addr,
               tr_input_data_o => input_data_write,
-              bram_mux_ctrl => mux_ctrl);
+              bram_mux_ctrl => mux_ctrl,
+              tr_event_i => bootcode_ev_i);
 
   blk_mem_gen_0_instance : blk_mem_gen_0
     port map (clka  => bootcode_clk,
