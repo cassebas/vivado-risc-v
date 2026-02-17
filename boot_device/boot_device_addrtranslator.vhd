@@ -9,8 +9,8 @@ entity boot_device_addrtranslator is
            BRAM_WEA_WIDTH  : integer := 4;
 
            INPUT_IDX_LEN   : integer := 16;
-           INPUT_IDX_LO    : integer := 16#5BB#;
-           INPUT_IDX_HI    : integer := 16#5CB# - 1);
+           INPUT_IDX_LO    : integer := 16#5CD#;
+           INPUT_IDX_HI    : integer := 16#5DD# - 1);
 
   port (clk             : in std_logic;
         rst_n           : in std_logic;

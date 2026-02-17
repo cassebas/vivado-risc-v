@@ -40,7 +40,7 @@ architecture behavioral of reset_control is
   signal blink_state : std_logic;
 
   -- Number of clock periods the reset signal is asserted
-  constant RST_CLK_PERIODS : natural := 3;
+  constant RST_CLK_PERIODS : natural := 1;
   -- Number of clock periods the reset signal is to be inhibited
   constant RST_CLK_INHIBIT : natural := 100 - RST_CLK_PERIODS;
 
@@ -104,8 +104,8 @@ begin
           cpu_reset <= '1';
         elsif cmd = CMD_RESET then
           -- Reset request
-          reset_periods := RST_CLK_PERIODS;
-          reset_inhibit := RST_CLK_INHIBIT;
+          reset_periods := RST_CLK_PERIODS-1;
+          reset_inhibit := RST_CLK_INHIBIT-1;
           cpu_reset <= '0';
         end if;
       end if;
