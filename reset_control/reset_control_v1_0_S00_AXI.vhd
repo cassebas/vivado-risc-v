@@ -120,11 +120,11 @@ architecture arch_imp of reset_control_v1_0_S00_AXI is
 	signal aw_en	: std_logic;
 
     component reset_control
-      port (clk          : in std_logic;
-            async_resetn : in std_logic;
-            cmd_in       : in std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
-            led_out      : out std_logic_vector(7 downto 0);
-            cpu_reset    : out std_logic);
+      port (clk       : in std_logic;
+            aresetn   : in std_logic;
+            cmd_in    : in std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+            led_out   : out std_logic_vector(7 downto 0);
+            cpu_reset : out std_logic);
     end component;
 
 begin
@@ -395,10 +395,10 @@ begin
 
 	-- Add user logic here
     reset_control0 : reset_control
-      port map (clk => S_AXI_ACLK,
-                async_resetn => S_AXI_ARESETN,
-                cmd_in => slv_reg0(31 downto 0),
-                led_out => led_out,
+      port map (clk       => S_AXI_ACLK,
+                aresetn   => S_AXI_ARESETN,
+                cmd_in    => slv_reg0(31 downto 0),
+                led_out   => led_out,
                 cpu_reset => cpu_reset);
 	-- User logic ends
 
