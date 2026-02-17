@@ -35,7 +35,7 @@ FRESULT br_close (BlockRam *fp)
     return FR_OK;
 }
 
-static uint8_t get_byte_from_word(uint32_t word, uint8_t idx)
+static inline uint8_t get_byte_from_word(uint32_t word, uint8_t idx)
 {
     if (idx == 0) {
         return (uint8_t) ((word >> 24) & 0xFF);
@@ -64,16 +64,20 @@ FRESULT br_read (BlockRam *fp, void *buff, UINT btr, UINT *br)
     uint32_t blockmem_idx = fp->byte_index >> 2;
     uint8_t blockmem_offset = fp->byte_index & 0x3;
 
+    uint32_t word = fp->memptr[blockmem_idx++];
+    uint32_t bytes_read = 0;
+
     while (btr-- > 0) {
-        *mybuff++ = get_byte_from_word(fp->memptr[blockmem_idx],
-                                       blockmem_offset);
-        fp->byte_index++;
-        (*br)++;
-        if (++blockmem_offset == 4) {
-            blockmem_idx++;
-            blockmem_offset = 0;
-        }
+      *mybuff++ = get_byte_from_word(word, blockmem_offset);
+      fp->byte_index++;
+      bytes_read++;
+      if (++blockmem_offset == 4) {
+        word = fp->memptr[blockmem_idx++];
+        blockmem_offset = 0;
+      }
     }
+
+    *br = bytes_read;
 
     return FR_OK;
 }
