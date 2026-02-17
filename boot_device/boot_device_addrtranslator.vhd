@@ -9,8 +9,8 @@ entity boot_device_addrtranslator is
            BRAM_WEA_WIDTH  : integer := 4;
 
            INPUT_IDX_LEN   : integer := 16;
-           INPUT_IDX_LO    : integer := 16#5CD#;
-           INPUT_IDX_HI    : integer := 16#5DD# - 1);
+           INPUT_IDX_LO    : integer := 16#599#;
+           INPUT_IDX_HI    : integer := 16#5A9# - 1);
 
   port (clk             : in std_logic;
         rst_n           : in std_logic;
@@ -39,6 +39,8 @@ architecture structural of boot_device_addrtranslator is
   constant BLOCK_SIZE : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (4 => '1',
                                                                  others => '0');
 
+  signal reset_active : std_logic;
+
 begin
 
   tr_app_wea_o <= tr_wea_i;
@@ -56,7 +58,13 @@ begin
   begin
     if rising_edge(clk) then
       if rst_n = '0' then
-        addr_idx_offset <= addr_idx_next;
+        if reset_active = '0' then
+          -- Only increase offset upon a new reset event
+          addr_idx_offset <= addr_idx_next;
+          reset_active <= '1';
+        end if;
+      else
+        reset_active <= '0';
       end if;
     end if;
   end process compute_offset;
