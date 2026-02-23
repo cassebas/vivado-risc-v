@@ -10,6 +10,13 @@ entity boot_device is
 
   port (cpu_reset       : in std_logic;  --  CPU reset, active low
 
+        -- UART
+        rx_i      : in std_logic;
+        tx_o      : out std_logic;
+        ctsn_i    : in std_logic;
+        rtsn_o    : out std_logic;
+        interrupt : out std_logic;
+
         S00_AXI_aclk    : in std_logic;  --  AXI clock
         S00_AXI_aresetn : in std_logic;  --  AXI reset, active low
 
@@ -98,7 +105,8 @@ architecture behavior of boot_device is
   -- Component declarations
   component boot_device_bootcode is
     generic (BRAM_DATA_WIDTH : integer;
-             BRAM_ADDR_WIDTH : integer);
+             BRAM_ADDR_WIDTH : integer;
+             BRAM_WEA_WIDtH  : integer);
 
     port (bootcode_clk    : in std_logic;
           bootcode_rst_n  : in std_logic;
@@ -106,7 +114,14 @@ architecture behavior of boot_device is
           bootcode_addr_i : in std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
           bootcode_data_i : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
           bootcode_data_o : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
-          bootcode_ev_i   : in std_logic);
+          bootcode_ev_i   : in std_logic;
+
+          -- UART
+          bootcode_rx_i   : in std_logic;
+          bootcode_tx_o   : out std_logic;
+          bootcode_ctsn_i : in std_logic;
+          bootcode_rtsn_o : out std_logic;
+          interrupt       : out std_logic);
   end component boot_device_bootcode;
 
   component boot_device_axislave is
@@ -148,7 +163,8 @@ begin
 
   boot_device_bootcode_inst : boot_device_bootcode
     generic map (BRAM_DATA_WIDTH => BRAM_DATA_WIDTH,
-                 BRAM_ADDR_WIDTH => BRAM_ADDR_WIDTH)
+                 BRAM_ADDR_WIDTH => BRAM_ADDR_WIDTH,
+                 BRAM_WEA_WIDTH  => BRAM_WEA_WIDTH)
 
     port map (bootcode_clk    => s00_axi_aclk,
               bootcode_rst_n  => cpu_reset,
@@ -156,7 +172,13 @@ begin
               bootcode_addr_i => addr,
               bootcode_data_i => data_write,
               bootcode_data_o => data_read,
-              bootcode_ev_i   => event);
+              bootcode_ev_i   => event,
+
+              bootcode_rx_i   => rx_i,
+              bootcode_tx_o   => tx_o,
+              bootcode_ctsn_i => ctsn_i,
+              bootcode_rtsn_o => rtsn_o,
+              interrupt       => interrupt);
 
   boot_device_axislave_inst : boot_device_axislave
     generic map (BD_AXISLAVE_DATA_WIDTH => S_AXI_DATA_WIDTH,

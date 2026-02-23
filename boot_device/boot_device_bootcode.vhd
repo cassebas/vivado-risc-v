@@ -13,16 +13,40 @@ entity boot_device_bootcode is
         bootcode_addr_i : in std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
         bootcode_data_i : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
         bootcode_data_o : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
-        bootcode_ev_i   : in std_logic);
+        bootcode_ev_i   : in std_logic;
+
+        -- UART
+        bootcode_rx_i   : in std_logic;
+        bootcode_tx_o   : out std_logic;
+        bootcode_ctsn_i : in std_logic;
+        bootcode_rtsn_o : out std_logic;
+        interrupt       : out std_logic);
 end entity boot_device_bootcode;
 
 
 architecture structural of boot_device_bootcode is
 
-  signal app_wea, input_wea   : std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
-  signal app_addr, input_addr : std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
-  signal app_data_write, input_data_write : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
-  signal app_data_read, input_data_read : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+  signal app_wea        : std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+  signal translator_wea : std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+  signal filler_wea     : std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+
+  signal app_addr        : std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+  signal translator_addr : std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+  signal filler_addr     : std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+
+  signal app_data        : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+  signal translator_data : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+  signal filler_data     : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+
+  signal input_wea1, input_wea2   : std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+  signal input_addr1, input_addr2 : std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+  signal input_data1, input_data2 : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+
+  signal app_data_read    : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+  signal input_data_read  : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+  signal input_data1_read : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+  signal input_data2_read : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+
   signal mux_ctrl : std_logic;
 
   component boot_device_addrtranslator is
@@ -39,6 +63,19 @@ architecture structural of boot_device_bootcode is
           tr_input_data_o : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
           bram_mux_ctrl   : out std_logic;
           tr_event_i      : in std_logic);
+  end component;
+
+  component boot_device_datafiller is
+    port (clk             : in std_logic;
+          rst_n           : in std_logic;
+          uart_rx         : in std_logic;
+          uart_tx         : out std_logic;
+          uart_ctsn       : in std_logic;
+          uart_rtsn       : out std_logic;
+          interrupt       : out std_logic;
+          fill_wea_o      : out std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+          fill_addr_o     : out std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+          fill_data_o     : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0));
   end component;
 
   component blk_mem_gen_0
@@ -67,28 +104,71 @@ begin
               tr_data_i => bootcode_data_i,
               tr_app_wea_o => app_wea,
               tr_app_addr_o => app_addr,
-              tr_app_data_o => app_data_write,
-              tr_input_wea_o => input_wea,
-              tr_input_addr_o => input_addr,
-              tr_input_data_o => input_data_write,
+              tr_app_data_o => app_data,
+              tr_input_wea_o => translator_wea,
+              tr_input_addr_o => translator_addr,
+              tr_input_data_o => translator_data,
               bram_mux_ctrl => mux_ctrl,
               tr_event_i => bootcode_ev_i);
+
+  boot_device_datafiller_0 : boot_device_datafiller
+    port map (
+        clk             => bootcode_clk,
+        rst_n           => bootcode_rst_n,
+        uart_rx         => bootcode_rx_i,
+        uart_tx         => bootcode_tx_o,
+        uart_ctsn       => bootcode_ctsn_i,
+        uart_rtsn       => bootcode_rtsn_o,
+        interrupt       => interrupt,
+        fill_wea_o      => filler_wea,
+        fill_addr_o     => filler_addr,
+        fill_data_o     => filler_data);
 
   blk_mem_gen_0_instance : blk_mem_gen_0
     port map (clka  => bootcode_clk,
               wea   => app_wea,
               addra => app_addr,
-              dina  => app_data_write,
+              dina  => app_data,
               douta => app_data_read);
 
   blk_mem_gen_1_instance : blk_mem_gen_1
     port map (clka  => bootcode_clk,
-              wea   => input_wea,
-              addra => input_addr,
-              dina  => input_data_write,
-              douta => input_data_read);
+              wea   => input_wea1,
+              addra => input_addr1,
+              dina  => input_data1,
+              douta => input_data1_read);
+
+  blk_mem_gen_2_instance : blk_mem_gen_1
+    port map (clka  => bootcode_clk,
+              wea   => input_wea2,
+              addra => input_addr2,
+              dina  => input_data2,
+              douta => input_data2_read);
 
   bootcode_data_o <= app_data_read when mux_ctrl = '0' else
                      input_data_read;
+
+  -- TODO make this mux meaningful, the following is obviously wrong
+  input_data_read <= input_data1_read when mux_ctrl = '0' else
+                     input_data2_read;
+
+  muxes : process (mux_ctrl) is
+  begin
+    if mux_ctrl = '1' then
+      input_wea1 <= app_wea;
+      input_wea2 <= filler_wea;
+      input_addr1 <= app_addr;
+      input_addr2 <= filler_addr;
+      input_data1 <= app_data;
+      input_data2 <= filler_data;
+    else
+      input_wea1 <= filler_wea;
+      input_wea2 <= app_wea;
+      input_addr1 <= filler_addr;
+      input_addr2 <= app_addr;
+      input_data1 <= filler_data;
+      input_data2 <= app_data;
+    end if;
+  end process muxes;
 
 end architecture;

@@ -29,8 +29,7 @@ create_ip_run [get_files -of_objects [get_fileset sources_1] workspace/${core_co
 
 launch_runs blk_mem_gen_0_synth_1 -jobs 6
 
-export_simulation -of_objects [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_0/blk_mem_gen_0.xci] -directory workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.ip_user_files/sim_scripts -ip_user_files_dir workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.ip_user_files -ipstatic_source_dir workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.ip_user_files/ipstatic -lib_map_path [list {modelsim=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/modelsim} {questa=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/questa} {xcelium=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/xcelium} {vcs=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/vcs} {riviera=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/riviera}] -use_ip_compiled_libs -force -quiet
-
+# export_simulation -of_objects [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_0/blk_mem_gen_0.xci] -directory workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.ip_user_files/sim_scripts -ip_user_files_dir workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.ip_user_files -ipstatic_source_dir workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.ip_user_files/ipstatic -lib_map_path [list {modelsim=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/modelsim} {questa=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/questa} {xcelium=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/xcelium} {vcs=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/vcs} {riviera=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/riviera}] -use_ip_compiled_libs -force -quiet
 
 create_ip -name blk_mem_gen -vendor xilinx.com -library ip -version 8.4 -module_name blk_mem_gen_1
 set_property -dict [list \
@@ -54,10 +53,10 @@ create_ip_run [get_files -of_objects [get_fileset sources_1] workspace/${core_co
 
 launch_runs blk_mem_gen_1_synth_1 -jobs 6
 
-export_simulation -of_objects [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_1/blk_mem_gen_1.xci] -directory workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.ip_user_files/sim_scripts -ip_user_files_dir workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.ip_user_files -ipstatic_source_dir workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.ip_user_files/ipstatic -lib_map_path [list {modelsim=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/modelsim} {questa=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/questa} {xcelium=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/xcelium} {vcs=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/vcs} {riviera=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/riviera}] -use_ip_compiled_libs -force -quiet
+# export_simulation -of_objects [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_1/blk_mem_gen_1.xci] -directory workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.ip_user_files/sim_scripts -ip_user_files_dir workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.ip_user_files -ipstatic_source_dir workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.ip_user_files/ipstatic -lib_map_path [list {modelsim=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/modelsim} {questa=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/questa} {xcelium=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/xcelium} {vcs=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/vcs} {riviera=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/riviera}] -use_ip_compiled_libs -force -quiet
 
-
-add_files -norecurse {boot_device/boot_device.vhd boot_device/boot_device_axislave.vhd boot_device/boot_device_bootcode.vhd boot_device/boot_device_addrtranslator.vhd boot_device/blk_mem_gen_0.vhd boot_device/blk_mem_gen_0.vhd}
+add_files -norecurse {boot_device/boot_device.vhd boot_device/boot_device_axislave.vhd boot_device/boot_device_bootcode.vhd boot_device/boot_device_addrtranslator.vhd boot_device/boot_device_datafiller.vhd boot_device/boot_device_datarcv.vhd boot_device/blk_mem_gen_0.vhd boot_device/blk_mem_gen_1.vhd}
+add_files -fileset constrs_1 -norecurse board/genesys2/uart_extra.xdc
 update_compile_order -fileset sources_1
 
 open_bd_design ${project_dir}/genesys2-riscv.srcs/sources_1/bd/riscv/riscv.bd
@@ -69,6 +68,44 @@ connect_bd_intf_net [get_bd_intf_pins IO/io_axi_s/M05_AXI] -boundary_type upper 
 connect_bd_net [get_bd_pins IO/axi_clock] [get_bd_pins IO/boot_device_0/S00_AXI_aclk]
 connect_bd_net [get_bd_pins IO/axi_reset] [get_bd_pins IO/boot_device_0/S00_AXI_aresetn]
 connect_bd_net [get_bd_pins IO/reset_control_v1_0_0/cpu_reset] [get_bd_pins IO/boot_device_0/cpu_reset]
+
+startgroup
+create_bd_pin -dir O IO/usb_uart_extra_rtsn
+connect_bd_net [get_bd_pins IO/usb_uart_extra_rtsn] [get_bd_pins IO/boot_device_0/rtsn_o]
+endgroup
+startgroup
+create_bd_pin -dir O IO/usb_uart_extra_txd
+connect_bd_net [get_bd_pins IO/usb_uart_extra_txd] [get_bd_pins IO/boot_device_0/tx_o]
+endgroup
+startgroup
+create_bd_pin -dir I IO/usb_uart_extra_rxd
+connect_bd_net [get_bd_pins IO/usb_uart_extra_rxd] [get_bd_pins IO/boot_device_0/rx_i]
+endgroup
+startgroup
+create_bd_pin -dir I IO/usb_uart_extra_ctsn
+connect_bd_net [get_bd_pins IO/usb_uart_extra_ctsn] [get_bd_pins IO/boot_device_0/ctsn_i]
+endgroup
+startgroup
+connect_bd_net [get_bd_pins IO/boot_device_0/interrupt] [get_bd_pins IO/xlconcat_0/In3]
+endgroup
+
+startgroup
+create_bd_port -dir O usb_uart_extra_rtsn
+connect_bd_net [get_bd_ports usb_uart_extra_rtsn] [get_bd_pins IO/usb_uart_extra_rtsn]
+endgroup
+startgroup
+create_bd_port -dir O usb_uart_extra_txd
+connect_bd_net [get_bd_pins /IO/usb_uart_extra_txd] [get_bd_ports usb_uart_extra_txd]
+endgroup
+startgroup
+create_bd_port -dir I usb_uart_extra_rxd
+connect_bd_net [get_bd_pins /IO/usb_uart_extra_rxd] [get_bd_ports usb_uart_extra_rxd]
+endgroup
+startgroup
+create_bd_port -dir I usb_uart_extra_ctsn
+connect_bd_net [get_bd_ports usb_uart_extra_ctsn] [get_bd_pins IO/usb_uart_extra_ctsn]
+endgroup
+
 assign_bd_address [get_bd_addr_segs {IO/boot_device_0/S00_AXI/reg0}]
 set_property offset 0x60050000 [get_bd_addr_segs {RocketChip/IO_AXI4/SEG_boot_device_0_reg0}]
 set_property range 64K [get_bd_addr_segs {RocketChip/IO_AXI4/SEG_boot_device_0_reg0}]
