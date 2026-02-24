@@ -12,34 +12,45 @@ entity boot_device_addrtranslator is
            INPUT_IDX_LO    : integer := 16#591#;
            INPUT_IDX_HI    : integer := 16#5A1# - 1);
 
-  port (clk             : in std_logic;
-        rst_n           : in std_logic;
-        tr_wea_i        : in std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
-        tr_addr_i       : in std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
-        tr_data_i       : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
-        tr_app_wea_o    : out std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
-        tr_app_addr_o   : out std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
-        tr_app_data_o   : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
-        tr_input_wea_o  : out std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
-        tr_input_addr_o : out std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
-        tr_input_data_o : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
-        bram_mux_ctrl   : out std_logic;
-        tr_event_i      : in std_logic);
+  port (clk                  : in std_logic;
+        rst_n                : in std_logic;
+        tr_wea_i             : in std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+        tr_addr_i            : in std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+        tr_data_i            : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+        tr_app_wea_o         : out std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+        tr_app_addr_o        : out std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+        tr_app_data_o        : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+        tr_input_wea_o       : out std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+        tr_input_addr_o      : out std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+        tr_input_data_o      : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+        appdata_mux_ctrl_o   : out std_logic;
+        inputdata_mux_ctrl_o : out std_logic;
+        tr_event_i           : in std_logic);
 end entity boot_device_addrtranslator;
 
 
 architecture structural of boot_device_addrtranslator is
 
   signal addr_idx_input  : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
-  signal addr_idx_offset : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (others => '0');
-  signal addr_idx_next   : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
   signal addr_idx_new    : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
+  signal addr_idx_offset : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (others => '0');
+  signal addr_idx_offset_nxt : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
 
-  -- Block size is 16
+  -- Block size 16 (for 14 bits) is 00_0000_0001_0000
   constant BLOCK_SIZE : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (4 => '1',
                                                                  others => '0');
 
+  -- Maximum offset (for 14 bits) is 11_1111_1111_0000
+  constant MAX_OFFSET : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (3 => '0',
+                                                                 2 => '0',
+                                                                 1 => '0',
+                                                                 0 => '0',
+                                                                 others => '1');
+
   signal reset_active : std_logic;
+
+  signal appdata_mux_ctrl   : std_logic;
+  signal inputdata_mux_ctrl : std_logic := '0';
 
 begin
 
@@ -52,7 +63,10 @@ begin
   tr_input_data_o <= tr_data_i;
 
   addr_idx_new <= addr_idx_input - INPUT_IDX_LO + addr_idx_offset;
-  addr_idx_next <= addr_idx_offset + BLOCK_SIZE;
+  addr_idx_offset_nxt <= addr_idx_offset + BLOCK_SIZE;
+
+  appdata_mux_ctrl_o <= appdata_mux_ctrl;
+  inputdata_mux_ctrl_o <= inputdata_mux_ctrl;
 
   compute_offset : process (clk) is
   begin
@@ -60,7 +74,11 @@ begin
       if rst_n = '0' then
         if reset_active = '0' then
           -- Only increase offset upon a new reset event
-          addr_idx_offset <= addr_idx_next;
+          addr_idx_offset <= addr_idx_offset_nxt;
+          if addr_idx_offset = MAX_OFFSET then
+            addr_idx_offset <= (others => '0');
+            inputdata_mux_ctrl <= not inputdata_mux_ctrl;
+          end if;
           reset_active <= '1';
         end if;
       else
@@ -76,9 +94,9 @@ begin
   begin
     if INPUT_IDX_LO <= addr_idx_input and addr_idx_input <= INPUT_IDX_HI then
       -- Must be the input data located between 0x600505BB and 0x600505CB-1
-      bram_mux_ctrl <= '1';
+      appdata_mux_ctrl <= '1';
     else
-      bram_mux_ctrl <= '0';
+      appdata_mux_ctrl <= '0';
     end if;
   end process mux_ctrl_proc;
 

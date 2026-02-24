@@ -47,22 +47,24 @@ architecture structural of boot_device_bootcode is
   signal input_data1_read : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
   signal input_data2_read : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
 
-  signal mux_ctrl : std_logic;
+  signal appdata_mux_ctrl   : std_logic;
+  signal inputdata_mux_ctrl : std_logic;
 
   component boot_device_addrtranslator is
-    port (clk             : in std_logic;
-          rst_n           : in std_logic;
-          tr_wea_i        : in std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
-          tr_addr_i       : in std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
-          tr_data_i       : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
-          tr_app_wea_o    : out std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
-          tr_app_addr_o   : out std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
-          tr_app_data_o   : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
-          tr_input_wea_o  : out std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
-          tr_input_addr_o : out std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
-          tr_input_data_o : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
-          bram_mux_ctrl   : out std_logic;
-          tr_event_i      : in std_logic);
+    port (clk                  : in std_logic;
+          rst_n                : in std_logic;
+          tr_wea_i             : in std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+          tr_addr_i            : in std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+          tr_data_i            : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+          tr_app_wea_o         : out std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+          tr_app_addr_o        : out std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+          tr_app_data_o        : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+          tr_input_wea_o       : out std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+          tr_input_addr_o      : out std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+          tr_input_data_o      : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+          appdata_mux_ctrl_o   : out std_logic;
+          inputdata_mux_ctrl_o : out std_logic;
+          tr_event_i           : in std_logic);
   end component;
 
   component boot_device_datafiller is
@@ -108,7 +110,8 @@ begin
               tr_input_wea_o => translator_wea,
               tr_input_addr_o => translator_addr,
               tr_input_data_o => translator_data,
-              bram_mux_ctrl => mux_ctrl,
+              appdata_mux_ctrl_o => appdata_mux_ctrl,
+              inputdata_mux_ctrl_o => inputdata_mux_ctrl,
               tr_event_i => bootcode_ev_i);
 
   boot_device_datafiller_0 : boot_device_datafiller
@@ -145,16 +148,15 @@ begin
               dina  => input_data2,
               douta => input_data2_read);
 
-  bootcode_data_o <= app_data_read when mux_ctrl = '0' else
+  bootcode_data_o <= app_data_read when appdata_mux_ctrl = '0' else
                      input_data_read;
 
-  -- TODO make this mux meaningful, the following is obviously wrong
-  input_data_read <= input_data1_read when mux_ctrl = '0' else
+  input_data_read <= input_data1_read when inputdata_mux_ctrl = '0' else
                      input_data2_read;
 
-  muxes : process (mux_ctrl) is
+  muxes : process (inputdata_mux_ctrl) is
   begin
-    if mux_ctrl = '1' then
+    if inputdata_mux_ctrl = '0' then
       input_wea1 <= app_wea;
       input_wea2 <= filler_wea;
       input_addr1 <= app_addr;

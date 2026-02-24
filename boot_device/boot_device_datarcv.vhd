@@ -55,9 +55,17 @@ architecture behavior of boot_device_datarcv is
   signal axi_lite_r_state, axi_lite_r_state_nxt : axi_lite_state_type;
   signal axi_lite_w_state, axi_lite_w_state_nxt : axi_lite_state_type;
 
-  signal rcv_reg : std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
-  signal rcv_tmp : std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+  signal rcv_reg : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+  signal rcv_tmp : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
   signal rcv_tmp_ready : std_logic;
+
+  signal fill_wea  : std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+  signal fill_addr : std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+  signal fill_addr_next : std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+  signal fill_data : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+  signal load_data, next_addr : std_logic;
+
+  constant MAX_ADDR : integer := 2**BRAM_ADDR_WIDTH - 1;
 
   -- For counting the received bytes we will need 2 bits, because a
   -- maximum of 4 bytes will be received.
@@ -70,6 +78,36 @@ architecture behavior of boot_device_datarcv is
   constant RX_BFST : unsigned(1 downto 0) := RX_B0;
   constant RX_BLST : unsigned(1 downto 0) := RX_B3;
 
+  --
+  -- AXI Lite signals
+  --
+  -- AXI Lite Write Request channel
+  signal axi_awaddr  : std_logic_vector(UART_ADDR_WIDTH-1 downto 0);
+  signal axi_awvalid : std_logic;
+  -- AXI Lite Write Data channel
+  signal axi_wdata   : std_logic_vector(UART_DATA_WIDTH-1 downto 0);
+  signal axi_wvalid  : std_logic;
+  -- AXI Lite Write Response channel
+  signal axi_bready  : std_logic;
+  -- AXI Lite Read Request channel
+  signal axi_araddr  : std_logic_vector(UART_ADDR_WIDTH-1 downto 0);
+  signal axi_arvalid : std_logic;
+  -- AXI Lite Read Data channel
+  signal axi_rready  : std_logic;
+
+
+  -- Read from UART rx buffer: address is 4'h00
+  constant AXI_READ_RXBUF_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
+    (others => '0');
+  -- Write to UART tx buffer: address is 4'h04
+  constant AXI_WRITE_TXBUF_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
+    (2 => '1', others => '0');
+  -- Read from UART status register: address is 4'h08
+  constant AXI_READ_STATUS_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
+    (3 => '1', others => '0');
+  -- Write to UART control register: address is 4'h0c
+  constant AXI_WRITE_CTRL_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
+    (3 => '1', 2 => '1', others => '0');
 
 begin
   statemachine_register : process(clk, rst_n) is
@@ -84,6 +122,156 @@ begin
       axi_lite_w_state <= axi_lite_w_state_nxt;
     end if;
   end process statemachine_register;
+
+  --
+  -- Process that controls the registers for the
+  --   AXI Lite Write Response channel
+  --
+  -- *Not implemented yet*
+  --
+  axi_lite_write_resp_channel : process(clk, rst_n) is
+  begin
+    if rst_n = '0' then
+      axi_bready <= '0';
+    elsif rising_edge(clk) then
+      axi_bready <= '0';
+    end if;
+  end process axi_lite_write_resp_channel;
+
+  axi_lite_r_statemachine_decoder : process(axi_lite_r_state, axi_lite_w_state, rx_bytecnt_state,
+                                            M_AXI_rdata, M_AXI_rvalid) is
+  begin
+    axi_lite_r_state_nxt <= axi_lite_r_state;
+
+    case axi_lite_r_state is
+      when AXI_IDLE =>
+        if axi_lite_w_state = AXI_IDLE then
+          axi_lite_r_state_nxt <= AXI_READ_REQ_STATUS;
+        end if;
+      when AXI_READ_REQ_STATUS =>
+        axi_lite_r_state_nxt <= AXI_READ_DATA_STATUS;
+      when AXI_READ_REQ_BUFFER =>
+        axi_lite_r_state_nxt <= AXI_READ_DATA_BUFFER;
+      when AXI_READ_DATA_STATUS =>
+        if M_AXI_rvalid = '1' then
+          -- Check !rx_empty bit
+          if M_AXI_rdata(0) = '1' then
+            -- There is data available!
+            axi_lite_r_state_nxt <= AXI_READ_REQ_BUFFER;
+          else
+            axi_lite_r_state_nxt <= AXI_IDLE;
+          end if;
+        end if;
+      when AXI_READ_DATA_BUFFER =>
+        if M_AXI_rvalid = '1' then
+          if rx_bytecnt_state = RX_BLST then
+            -- Now reading last byte, next state back to AXI_IDLE
+            axi_lite_r_state_nxt <= AXI_IDLE;
+          else
+            axi_lite_r_state_nxt <= AXI_READ_REQ_STATUS;
+          end if;
+        end if;
+      when others =>
+        null;
+
+    end case;
+  end process axi_lite_r_statemachine_decoder;
+
+  --
+  -- Process that controls the registers for the
+  --   AXI Lite Write Request channel
+  --
+  -- *Not implemented yet*
+  --
+  axi_lite_write_req_channel : process(clk, rst_n) is
+  begin
+    if rst_n = '0' then
+      axi_awaddr <= (others => '0');
+      axi_awvalid <= '0';
+    elsif rising_edge(clk) then
+      if axi_lite_w_state = AXI_WRITE_REQ_DATA then
+        axi_awaddr <= AXI_WRITE_TXBUF_ADDR;
+        axi_awvalid <= '1';
+      elsif axi_lite_w_state = AXI_WRITE_RESP then
+        if M_AXI_bvalid = '1' then
+          axi_awaddr <= (others => '0');
+          axi_awvalid <= '0';
+        end if;
+      end if;
+    end if;
+  end process axi_lite_write_req_channel;
+
+
+  --
+  -- Process that controls the registers for the
+  --   AXI Lite Write Data channel
+  --
+  -- *Not implemented yet*
+  --
+  axi_lite_write_data_channel : process(clk, rst_n) is
+    variable ascii : std_logic_vector(7 downto 0);
+  begin
+    if rst_n = '0' then
+      axi_wdata <= (others => '0');
+      axi_wvalid <= '0';
+    elsif rising_edge(clk) then
+      axi_wdata <= (others => '0');
+      axi_wvalid <= '0';
+    end if;
+  end process axi_lite_write_data_channel;
+
+  --
+  -- Process that controls the registers for the
+  --   AXI Lite Read Request channel
+  --
+  axi_lite_read_req_channel : process(clk, rst_n) is
+  begin
+    if rst_n = '0' then
+      axi_araddr <= (others => '0');
+      axi_arvalid <= '0';
+    elsif rising_edge(clk) then
+      -- Default
+      if (axi_lite_r_state = AXI_READ_REQ_STATUS or
+          axi_lite_w_state = AXI_READ_REQ_STATUS) then
+        axi_araddr <= AXI_READ_STATUS_ADDR;
+        axi_arvalid <= '1';
+      elsif axi_lite_r_state = AXI_READ_REQ_BUFFER then
+        axi_araddr <= AXI_READ_RXBUF_ADDR;
+        axi_arvalid <= '1';
+      elsif (axi_lite_r_state = AXI_READ_DATA_STATUS or
+             axi_lite_w_state = AXI_READ_DATA_STATUS or
+             axi_lite_r_state = AXI_READ_DATA_BUFFER) then
+        if M_AXI_rvalid = '1' then
+          axi_araddr <= (others => '0');
+          axi_arvalid <= '0';
+        end if;
+      end if;
+    end if;
+  end process axi_lite_read_req_channel;
+
+  --
+  -- Process that controls the registers for the
+  --   AXI Lite Read Data channel
+  --
+  axi_lite_read_data_channel : process(clk, rst_n) is
+  begin
+    if rst_n = '0' then
+      axi_rready <= '0';
+    elsif rising_edge(clk) then
+      if (axi_lite_r_state = AXI_READ_REQ_STATUS or
+          axi_lite_w_state = AXI_READ_REQ_STATUS) then
+        axi_rready <= '0';
+      elsif axi_lite_r_state = AXI_READ_REQ_BUFFER then
+        axi_rready <= '0';
+      elsif (axi_lite_r_state = AXI_READ_DATA_STATUS or
+             axi_lite_w_state = AXI_READ_DATA_STATUS or
+             axi_lite_r_state = AXI_READ_DATA_BUFFER) then
+        if M_AXI_rvalid = '1' then
+          axi_rready <= '1';
+        end if;
+      end if;
+    end if;
+  end process axi_lite_read_data_channel;
 
 
   rx_bytecnt_statemachine_decoder : process(rx_bytecnt_state, axi_lite_r_state,
@@ -150,5 +338,57 @@ begin
     end if;
   end process rcv_reg_register;
 
+  fill_data_proc : process(clk, rst_n) is
+  begin
+    if rst_n = '0' then
+      fill_wea <= (others => '0');
+      fill_addr <= (others => '0');
+      fill_data <= (others => '0');
+      load_data <= '0';
+      next_addr <= '0';
+    elsif rising_edge(clk) then
+      if rcv_tmp_ready = '1' then
+        load_data <= '1';
+      elsif load_data = '1' then
+        fill_wea <= (others => '1');
+        fill_data <= rcv_reg;
+        load_data <= '0';
+        next_addr <= '1';
+      elsif next_addr = '1' then
+        fill_wea <= (others => '0');
+        fill_addr <= fill_addr_next;
+        next_addr <= '0';
+      end if;
+    end if;
+  end process fill_data_proc;
+
+  compute_next_address : process(fill_addr) is
+    variable this_address : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
+  begin
+    this_address := unsigned(fill_addr);
+    if this_address >= MAX_ADDR then
+      fill_addr_next <= (others => '0');
+    else
+      fill_addr_next <= std_logic_vector(this_address + 1);
+    end if;
+  end process compute_next_address;
+
+
+  --
+  -- AXI Lite outputs connected to registers
+  --
+  -- AXI Lite Write Request channel
+  M_AXI_awaddr <= axi_awaddr;
+  M_AXI_awvalid <= axi_awvalid;
+  -- AXI Lite Write Data channel
+  M_AXI_wdata <= axi_wdata;
+  M_AXI_wvalid <= axi_wvalid;
+  -- AXI Lite Write Response channel
+  M_AXI_bready <= axi_bready;
+  -- AXI Lite Read Request channel
+  M_AXI_araddr <= axi_araddr;
+  M_AXI_arvalid <= axi_arvalid;
+  -- AXI Lite Read Data channel
+  M_AXI_rready <= axi_rready;
 
 end architecture behavior;

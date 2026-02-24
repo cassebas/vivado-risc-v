@@ -8,7 +8,7 @@ entity boot_device is
   generic (S_AXI_DATA_WIDTH : integer   := 32;
            S_AXI_ADDR_WIDTH : integer   := 16);
 
-  port (cpu_reset       : in std_logic;  --  CPU reset, active low
+  port (cpu_reset : in std_logic;  --  CPU reset, active low
 
         -- UART
         rx_i      : in std_logic;
