@@ -29,7 +29,6 @@ create_ip_run [get_files -of_objects [get_fileset sources_1] workspace/${core_co
 
 launch_runs blk_mem_gen_0_synth_1 -jobs 6
 
-# export_simulation -of_objects [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_0/blk_mem_gen_0.xci] -directory workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.ip_user_files/sim_scripts -ip_user_files_dir workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.ip_user_files -ipstatic_source_dir workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.ip_user_files/ipstatic -lib_map_path [list {modelsim=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/modelsim} {questa=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/questa} {xcelium=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/xcelium} {vcs=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/vcs} {riviera=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/riviera}] -use_ip_compiled_libs -force -quiet
 
 create_ip -name blk_mem_gen -vendor xilinx.com -library ip -version 8.4 -module_name blk_mem_gen_1
 set_property -dict [list \
@@ -53,7 +52,28 @@ create_ip_run [get_files -of_objects [get_fileset sources_1] workspace/${core_co
 
 launch_runs blk_mem_gen_1_synth_1 -jobs 6
 
-# export_simulation -of_objects [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_1/blk_mem_gen_1.xci] -directory workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.ip_user_files/sim_scripts -ip_user_files_dir workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.ip_user_files -ipstatic_source_dir workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.ip_user_files/ipstatic -lib_map_path [list {modelsim=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/modelsim} {questa=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/questa} {xcelium=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/xcelium} {vcs=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/vcs} {riviera=workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.cache/compile_simlib/riviera}] -use_ip_compiled_libs -force -quiet
+create_ip -name blk_mem_gen -vendor xilinx.com -library ip -version 8.4 -module_name blk_mem_gen_2
+set_property -dict [list \
+  CONFIG.Byte_Size {8} \
+  CONFIG.Coe_File ${project_dir}/../../../boot_device/pattern.coe \
+  CONFIG.Enable_A {Always_Enabled} \
+  CONFIG.Load_Init_File {true} \
+  CONFIG.Read_Width_A {32} \
+  CONFIG.Use_Byte_Write_Enable {true} \
+  CONFIG.Write_Depth_A {131072} \
+  CONFIG.Write_Width_A {32} \
+  CONFIG.use_bram_block {Stand_Alone} \
+] [get_ips blk_mem_gen_2]
+
+generate_target {instantiation_template} [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_2/blk_mem_gen_2.xci]
+
+generate_target all [get_files  workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_2/blk_mem_gen_2.xci]
+catch { config_ip_cache -export [get_ips -all blk_mem_gen_2] }
+export_ip_user_files -of_objects [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_2/blk_mem_gen_2.xci] -no_script -sync -force -quiet
+create_ip_run [get_files -of_objects [get_fileset sources_1] workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_2/blk_mem_gen_2.xci]
+
+launch_runs blk_mem_gen_2_synth_1 -jobs 6
+
 
 add_files -norecurse {boot_device/boot_device.vhd boot_device/boot_device_axislave.vhd boot_device/boot_device_bootcode.vhd boot_device/boot_device_addrtranslator.vhd boot_device/boot_device_datafiller.vhd boot_device/boot_device_datarcv.vhd boot_device/blk_mem_gen_0.vhd boot_device/blk_mem_gen_1.vhd}
 add_files -fileset constrs_1 -norecurse board/genesys2/uart_extra.xdc

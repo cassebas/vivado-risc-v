@@ -96,6 +96,14 @@ architecture structural of boot_device_bootcode is
           douta : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0));
   end component;
 
+  component blk_mem_gen_2
+    port (clka  : in std_logic;
+          wea   : in std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+          addra : in std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+          dina  : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+          douta : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0));
+  end component;
+
 begin
 
   boot_dev_addrtranslator_0 : boot_device_addrtranslator
@@ -141,7 +149,7 @@ begin
               dina  => input_data1,
               douta => input_data1_read);
 
-  blk_mem_gen_2_instance : blk_mem_gen_1
+  blk_mem_gen_2_instance : blk_mem_gen_2
     port map (clka  => bootcode_clk,
               wea   => input_wea2,
               addra => input_addr2,
