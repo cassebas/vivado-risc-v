@@ -40,12 +40,19 @@ architecture structural of boot_device_addrtranslator is
   constant BLOCK_SIZE : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (4 => '1',
                                                                  others => '0');
 
-  -- Maximum offset (for 14 bits) is 11_1111_1111_0000
-  constant MAX_OFFSET : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (3 => '0',
-                                                                 2 => '0',
-                                                                 1 => '0',
-                                                                 0 => '0',
-                                                                 others => '1');
+  -- -- Maximum offset (for 14 bits) is 11_1111_1111_0000
+  -- constant MAX_OFFSET : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (3 => '0',
+  --                                                                2 => '0',
+  --                                                                1 => '0',
+  --                                                                0 => '0',
+  --                                                                others => '1');
+
+  -- TESTING: Smaller maximum offset (for 14 bits) is 00_0000_0111_0000 (112)
+  -- after 8 runs index will reach 127, 9th run will start from index 128
+  constant MAX_OFFSET : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (6 => '1',
+                                                                 5 => '1',
+                                                                 4 => '1',
+                                                                 others => '0');
 
   signal reset_active : std_logic;
 
