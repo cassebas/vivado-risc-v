@@ -157,19 +157,19 @@ begin
   muxes : process (inputdata_mux_ctrl) is
   begin
     if inputdata_mux_ctrl = '0' then
-      input_wea1 <= app_wea;
+      input_wea1 <= translator_wea;
       input_wea2 <= filler_wea;
-      input_addr1 <= app_addr;
+      input_addr1 <= translator_addr;
       input_addr2 <= filler_addr;
-      input_data1 <= app_data;
+      input_data1 <= translator_data;
       input_data2 <= filler_data;
     else
       input_wea1 <= filler_wea;
-      input_wea2 <= app_wea;
+      input_wea2 <= translator_wea;
       input_addr1 <= filler_addr;
-      input_addr2 <= app_addr;
+      input_addr2 <= translator_addr;
       input_data1 <= filler_data;
-      input_data2 <= app_data;
+      input_data2 <= translator_data;
     end if;
   end process muxes;
 
