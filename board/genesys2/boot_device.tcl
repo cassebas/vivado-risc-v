@@ -75,7 +75,7 @@ create_ip_run [get_files -of_objects [get_fileset sources_1] workspace/${core_co
 launch_runs blk_mem_gen_2_synth_1 -jobs 6
 
 
-add_files -norecurse {boot_device/boot_device.vhd boot_device/boot_device_axislave.vhd boot_device/boot_device_bootcode.vhd boot_device/boot_device_addrtranslator.vhd boot_device/boot_device_datafiller.vhd boot_device/boot_device_datarcv.vhd boot_device/blk_mem_gen_0.vhd boot_device/blk_mem_gen_1.vhd}
+add_files -norecurse {boot_device/boot_device.vhd boot_device/boot_device_axislave.vhd boot_device/boot_device_addrtranslator.vhd boot_device/boot_device_datafiller.vhd boot_device/boot_device_datarcv.vhd boot_device/blk_mem_gen_0.vhd boot_device/blk_mem_gen_1.vhd boot_device/blk_mem_gen_2.vhd}
 add_files -fileset constrs_1 -norecurse board/genesys2/uart_extra.xdc
 update_compile_order -fileset sources_1
 

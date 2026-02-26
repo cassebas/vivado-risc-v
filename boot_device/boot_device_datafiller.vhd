@@ -10,16 +10,17 @@ entity boot_device_datafiller is
            UART_ADDR_WIDTH : integer := 16;
            UART_DATA_WIDTH : integer := 32);
 
-  port (clk             : in std_logic;
-        rst_n           : in std_logic;
-        uart_rx         : in std_logic;
-        uart_tx         : out std_logic;
-        uart_ctsn       : in std_logic;
-        uart_rtsn       : out std_logic;
-        interrupt       : out std_logic;
-        fill_wea_o      : out std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
-        fill_addr_o     : out std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
-        fill_data_o     : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0));
+  port (clk         : in std_logic;
+        rst_n       : in std_logic;
+        cpu_reset   : in std_logic;
+        uart_rx     : in std_logic;
+        uart_tx     : out std_logic;
+        uart_ctsn   : in std_logic;
+        uart_rtsn   : out std_logic;
+        interrupt   : out std_logic;
+        fill_wea_o  : out std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+        fill_addr_o : out std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+        fill_data_o : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0));
 end entity boot_device_datafiller;
 
 
@@ -59,6 +60,12 @@ architecture structural of boot_device_datafiller is
     port (clk : in std_logic;
           rst_n : in std_logic;
 
+          -- This signal indicates the start of a new sequence of
+          -- repetitions, where the two BlockRAMs are swapped. This
+          -- means that this component should first send the
+          -- "START" command to the host computer.
+          cpu_reset     : in std_logic;
+
           --
           -- AXI Lite master ports
           --
@@ -83,6 +90,7 @@ architecture structural of boot_device_datafiller is
           M_AXI_rresp   : in std_logic_vector(1 downto 0);
           M_AXI_rvalid  : in std_logic;
           M_AXI_rready  : out std_logic;
+
           -- Filler address ports
           fill_wea_o  : out std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
           fill_addr_o : out std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
@@ -108,10 +116,12 @@ architecture structural of boot_device_datafiller is
 
   signal rx, tx, rtsn, ctsn : std_logic;
 
+  signal axi_reset : std_logic;
+
 begin
 
   uart_0 : uart
-    port map (async_resetn  => rst_n,
+    port map (async_resetn  => axi_reset,
               clock         => clk,
               s_axi_awaddr  => axi_awaddr,
               s_axi_awvalid => axi_awvalid,
@@ -138,6 +148,7 @@ begin
   boot_device_datarcv_0 : boot_device_datarcv
     port map (clk           => clk,
               rst_n         => rst_n,
+              cpu_reset     => cpu_reset,
               M_AXI_awaddr  => axi_awaddr,
               M_AXI_awvalid => axi_awvalid,
               M_AXI_awready => axi_awready,

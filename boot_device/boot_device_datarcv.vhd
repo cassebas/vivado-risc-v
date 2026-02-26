@@ -8,8 +8,14 @@ entity boot_device_datarcv is
            BRAM_DATA_WIDTH : integer := 32;
            UART_ADDR_WIDTH : integer := 16;
            UART_DATA_WIDTH : integer := 32);
-  port (clk   : in std_logic;
-        rst_n : in std_logic;
+  port (clk           : in std_logic;
+        rst_n         : in std_logic;
+
+        -- This signal indicates the start of a new sequence of
+        -- repetitions, where the two BlockRAMs are swapped. This
+        -- means that this component should first send the
+        -- "START" command to the host computer.
+        cpu_reset     : in std_logic;
 
         --
         -- AXI Lite master ports
@@ -67,16 +73,32 @@ architecture behavior of boot_device_datarcv is
 
   constant MAX_ADDR : integer := 2**BRAM_ADDR_WIDTH - 1;
 
+  -- For counting the sent bytes we will need 2 bits, because a
+  -- maximum of 4 bytes will be sent.
+  -- The bytes received are:
+  --  B0  -> first byte
+  --  B3  -> last byte
+  signal tx_bytecnt_state, tx_bytecnt_state_nxt : unsigned(1 downto 0);
+
   -- For counting the received bytes we will need 2 bits, because a
   -- maximum of 4 bytes will be received.
   -- The bytes received are:
   --  B0  -> first byte
   --  B3  -> last byte
   signal rx_bytecnt_state, rx_bytecnt_state_nxt : unsigned(1 downto 0);
-  constant RX_B0 : unsigned(1 downto 0) := "00";
-  constant RX_B3 : unsigned(1 downto 0) := "11";
-  constant RX_BFST : unsigned(1 downto 0) := RX_B0;
-  constant RX_BLST : unsigned(1 downto 0) := RX_B3;
+
+  constant B0   : unsigned(1 downto 0) := "00";
+  constant B1   : unsigned(1 downto 0) := "01";
+  constant B2   : unsigned(1 downto 0) := "10";
+  constant B3   : unsigned(1 downto 0) := "11";
+  constant BFST : unsigned(1 downto 0) := B0;
+  constant BLST : unsigned(1 downto 0) := B3;
+
+  -- Some named constants for the fixed command to be sent
+  constant CMD_B0 : std_logic_vector(7 downto 0) := "00110101"; -- '5' (ASCII: 53)
+  constant CMD_B1 : std_logic_vector(7 downto 0) := "00101010"; -- '*' (ASCII: 42)
+  constant CMD_B2 : std_logic_vector(7 downto 0) := "00110100"; -- '4' (ASCII: 52)
+  constant CMD_B3 : std_logic_vector(7 downto 0) := "00110010"; -- '2' (ASCII: 50)
 
   --
   -- AXI Lite signals
@@ -109,36 +131,59 @@ architecture behavior of boot_device_datarcv is
   constant AXI_WRITE_CTRL_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
     (3 => '1', 2 => '1', others => '0');
 
+  -- Initialize this signal as active, such that the component will start
+  -- sending the command to the host computer.
+  signal snd_data_active : std_logic := '1';
+  signal snd_data_done   : std_logic := '0';
+  signal rcv_data_active : std_logic := '0';
+  signal rcv_data_done   : std_logic := '0';
+
 begin
   statemachine_register : process(clk, rst_n) is
   begin
     if rst_n = '0' then
-      rx_bytecnt_state <= RX_BFST;
+      rx_bytecnt_state <= BFST;
       axi_lite_r_state <= AXI_IDLE;
       axi_lite_w_state <= AXI_IDLE;
     elsif rising_edge(clk) then
       rx_bytecnt_state <= rx_bytecnt_state_nxt;
+      tx_bytecnt_state <= tx_bytecnt_state_nxt;
       axi_lite_r_state <= axi_lite_r_state_nxt;
       axi_lite_w_state <= axi_lite_w_state_nxt;
     end if;
   end process statemachine_register;
 
-  --
-  -- Process that controls the registers for the
-  --   AXI Lite Write Response channel
-  --
-  -- *Not implemented yet*
-  --
-  axi_lite_write_resp_channel : process(clk, rst_n) is
-  begin
-    if rst_n = '0' then
-      axi_bready <= '0';
-    elsif rising_edge(clk) then
-      axi_bready <= '0';
-    end if;
-  end process axi_lite_write_resp_channel;
 
-  axi_lite_r_statemachine_decoder : process(axi_lite_r_state, axi_lite_w_state, rx_bytecnt_state,
+  rx_bytecnt_statemachine_decoder : process(rx_bytecnt_state, axi_lite_r_state,
+                                            M_AXI_rvalid) is
+  begin
+    rx_bytecnt_state_nxt <= rx_bytecnt_state;
+
+    if axi_lite_r_state = AXI_READ_DATA_BUFFER and M_AXI_rvalid = '1' then
+      if rx_bytecnt_state = BLST then
+        rx_bytecnt_state_nxt <= BFST;
+      else
+        rx_bytecnt_state_nxt <= rx_bytecnt_state + 1;
+      end if;
+    end if;
+  end process rx_bytecnt_statemachine_decoder;
+
+  tx_bytecnt_statemachine_decoder : process(tx_bytecnt_state, axi_lite_w_state,
+                                            M_AXI_bvalid) is
+  begin
+    rx_bytecnt_state_nxt <= rx_bytecnt_state;
+
+    if axi_lite_w_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
+      if tx_bytecnt_state = BLST then
+        tx_bytecnt_state_nxt <= BFST;
+      else
+        tx_bytecnt_state_nxt <= tx_bytecnt_state + 1;
+      end if;
+    end if;
+  end process tx_bytecnt_statemachine_decoder;
+
+  axi_lite_r_statemachine_decoder : process(axi_lite_r_state, axi_lite_w_state,
+                                            rx_bytecnt_state,
                                             M_AXI_rdata, M_AXI_rvalid) is
   begin
     axi_lite_r_state_nxt <= axi_lite_r_state;
@@ -164,7 +209,7 @@ begin
         end if;
       when AXI_READ_DATA_BUFFER =>
         if M_AXI_rvalid = '1' then
-          if rx_bytecnt_state = RX_BLST then
+          if rx_bytecnt_state = BLST then
             -- Now reading last byte, next state back to AXI_IDLE
             axi_lite_r_state_nxt <= AXI_IDLE;
           else
@@ -177,11 +222,48 @@ begin
     end case;
   end process axi_lite_r_statemachine_decoder;
 
+
+  axi_lite_w_statemachine_decoder : process(axi_lite_w_state, axi_lite_r_state,
+                                            snd_data_active,
+                                            M_AXI_rdata, M_AXI_rvalid,
+                                            M_AXI_bvalid) is
+  begin
+    axi_lite_w_state_nxt <= axi_lite_w_state;
+
+    case axi_lite_w_state is
+      when AXI_IDLE =>
+        if axi_lite_r_state = AXI_IDLE and snd_data_active = '1' then
+          axi_lite_w_state_nxt <= AXI_READ_REQ_STATUS;
+        end if;
+      when AXI_READ_REQ_STATUS =>
+        axi_lite_w_state_nxt <= AXI_READ_DATA_STATUS;
+      when AXI_READ_DATA_STATUS =>
+        if M_AXI_rvalid = '1' then
+          if M_AXI_rdata(3) /= '1' then
+            -- tx buffer is not full
+            axi_lite_w_state_nxt <= AXI_WRITE_REQ_DATA;
+          else
+            -- tx buffer is full, back to reading status register again
+            axi_lite_w_state_nxt <= AXI_READ_REQ_STATUS;
+          end if;
+        end if;
+      when AXI_WRITE_REQ_DATA =>
+        axi_lite_w_state_nxt <= AXI_WRITE_RESP;
+      when AXI_WRITE_RESP =>
+        if M_AXI_bvalid = '1' then
+          axi_lite_w_state_nxt <= AXI_IDLE;
+        else
+          axi_lite_w_state_nxt <= AXI_READ_REQ_STATUS;
+        end if;
+      when others =>
+        null;
+
+    end case;
+  end process axi_lite_w_statemachine_decoder;
+
   --
   -- Process that controls the registers for the
   --   AXI Lite Write Request channel
-  --
-  -- *Not implemented yet*
   --
   axi_lite_write_req_channel : process(clk, rst_n) is
   begin
@@ -206,8 +288,6 @@ begin
   -- Process that controls the registers for the
   --   AXI Lite Write Data channel
   --
-  -- *Not implemented yet*
-  --
   axi_lite_write_data_channel : process(clk, rst_n) is
     variable ascii : std_logic_vector(7 downto 0);
   begin
@@ -215,10 +295,60 @@ begin
       axi_wdata <= (others => '0');
       axi_wvalid <= '0';
     elsif rising_edge(clk) then
-      axi_wdata <= (others => '0');
-      axi_wvalid <= '0';
+      case axi_lite_w_state is
+        when AXI_IDLE =>
+          axi_wdata <= (others => '0');
+          axi_wvalid <= '0';
+        when AXI_WRITE_REQ_DATA =>
+          case tx_bytecnt_state is
+            when B0 =>
+                ascii := CMD_B0;
+            when B1 =>
+                ascii := CMD_B1;
+            when B2 =>
+                ascii := CMD_B2;
+            when others =>
+                ascii := CMD_B3;
+          end case;
+          axi_wdata(UART_DATA_WIDTH-1 downto 8) <= (others => '0');
+          axi_wdata(7 downto 0) <= ascii;
+          axi_wvalid <= '1';
+        when AXI_WRITE_RESP =>
+          if M_AXI_bvalid = '1' then
+            axi_wdata <= (others => '0');
+            axi_wvalid <= '0';
+          end if;
+        when others =>
+          null;
+      end case;
     end if;
   end process axi_lite_write_data_channel;
+
+
+  --
+  -- Process that controls the registers for the
+  --   AXI Lite Write Response channel
+  --
+  axi_lite_write_resp_channel : process(clk, rst_n) is
+  begin
+    if rst_n = '0' then
+      axi_bready <= '0';
+    elsif rising_edge(clk) then
+      case axi_lite_w_state is
+        when AXI_IDLE =>
+          axi_bready <= '0';
+        when AXI_WRITE_REQ_DATA =>
+          axi_bready <= '1';
+        when AXI_WRITE_RESP =>
+          if M_AXI_bvalid = '1' then
+            axi_bready <= '0';
+          end if;
+        when others =>
+          null;
+      end case;
+    end if;
+  end process axi_lite_write_resp_channel;
+
 
   --
   -- Process that controls the registers for the
@@ -274,29 +404,16 @@ begin
   end process axi_lite_read_data_channel;
 
 
-  rx_bytecnt_statemachine_decoder : process(rx_bytecnt_state, axi_lite_r_state,
-                                            M_AXI_rdata, M_AXI_rvalid) is
-  begin
-    rx_bytecnt_state_nxt <= rx_bytecnt_state;
-
-    if axi_lite_r_state = AXI_READ_DATA_BUFFER and M_AXI_rvalid = '1' then
-      if rx_bytecnt_state = RX_BLST then
-        rx_bytecnt_state_nxt <= RX_BFST;
-      else
-        rx_bytecnt_state_nxt <= rx_bytecnt_state + 1;
-      end if;
-    end if;
-  end process rx_bytecnt_statemachine_decoder;
 
   -- This process fills a temporary std_logic_vector with the received
-  -- bytes and puts them together in the form of 2 addresses of 4 bytes
-  -- wide (8 bytes in total).
+  -- bytes and puts them together in the form of 4 bytes.
+  --
   -- Each received byte is shifted n*8 bits to the left depending on the
   -- position of the byte. This way the end result after having received
   -- 4 bytes is:
   --  31-24  23-16  15-8  7-0
   --    B3     B2     B1   B0
-  -- |---------data---------|
+  -- |---------data-----------|
   --
   -- The received bytes are left shifted to their correct position,
   -- master sends the MSB first.
@@ -325,7 +442,7 @@ begin
       rcv_tmp_ready <= '0';
     elsif rising_edge(clk) then
       if axi_lite_r_state = AXI_READ_DATA_BUFFER and M_AXI_rvalid = '1' then
-        if rx_bytecnt_state = RX_BLST then
+        if rx_bytecnt_state = BLST then
           -- Delay copying rcv_tmp to rcv_reg with 1 clock cycle
           rcv_tmp_ready <= '1';
         end if;
@@ -374,21 +491,86 @@ begin
   end process compute_next_address;
 
 
+  rcv_data_active_proc : process(clk, rst_n) is
+    variable next_address : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
+  begin
+    if rst_n = '0' then
+      rcv_data_active <= '0';
+    elsif rising_edge(clk) then
+      next_address := unsigned(fill_addr_next);
+      if next_address > 0 then
+        if rcv_data_done /= '1' then
+          rcv_data_active <= '1';
+        end if;
+      end if;
+    end if;
+  end process rcv_data_active_proc;
+
+  rcv_data_done_proc : process(clk, rst_n) is
+    variable next_address : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
+  begin
+    if rst_n = '0' then
+      rcv_data_done <= '0';
+    elsif rising_edge(clk) then
+      next_address := unsigned(fill_addr_next);
+      if next_address = 0 then
+        if rx_bytecnt_state = BLST and M_AXI_rvalid = '1' then
+          rcv_data_done <= '1';
+        elsif rcv_data_active = '1' then
+          rcv_data_done <= '0';
+        end if;
+      end if;
+    end if;
+  end process rcv_data_done_proc;
+
+
+  snd_data_active_proc : process(clk, rst_n) is
+  begin
+    if rst_n = '0' then
+      snd_data_active <= '0';
+    elsif rising_edge(clk) then
+      if cpu_reset = '1' then
+        snd_data_active <= '1';
+      end if;
+
+      if snd_data_done = '1' then
+        snd_data_active <= '0';
+      end if;
+    end if;
+  end process snd_data_active_proc;
+
+
+  snd_data_done_proc : process(clk, rst_n) is
+  begin
+    if rst_n = '0' then
+      snd_data_done <= '0';
+    elsif rising_edge(clk) then
+      if cpu_reset = '1' then
+        snd_data_done <= '0';
+      end if;
+
+      if tx_bytecnt_state = BLST and M_AXI_bvalid = '1' then
+        snd_data_done <= '1';
+      end if;
+    end if;
+  end process snd_data_done_proc;
+
+
   --
   -- AXI Lite outputs connected to registers
   --
   -- AXI Lite Write Request channel
-  M_AXI_awaddr <= axi_awaddr;
+  M_AXI_awaddr  <= axi_awaddr;
   M_AXI_awvalid <= axi_awvalid;
   -- AXI Lite Write Data channel
-  M_AXI_wdata <= axi_wdata;
-  M_AXI_wvalid <= axi_wvalid;
+  M_AXI_wdata   <= axi_wdata;
+  M_AXI_wvalid  <= axi_wvalid;
   -- AXI Lite Write Response channel
-  M_AXI_bready <= axi_bready;
+  M_AXI_bready  <= axi_bready;
   -- AXI Lite Read Request channel
-  M_AXI_araddr <= axi_araddr;
+  M_AXI_araddr  <= axi_araddr;
   M_AXI_arvalid <= axi_arvalid;
   -- AXI Lite Read Data channel
-  M_AXI_rready <= axi_rready;
+  M_AXI_rready  <= axi_rready;
 
 end architecture behavior;
