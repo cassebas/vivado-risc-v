@@ -143,6 +143,7 @@ begin
   begin
     if rst_n = '0' then
       rx_bytecnt_state <= BFST;
+      tx_bytecnt_state <= BFST;
       axi_lite_r_state <= AXI_IDLE;
       axi_lite_w_state <= AXI_IDLE;
     elsif rising_edge(clk) then
@@ -168,10 +169,11 @@ begin
     end if;
   end process rx_bytecnt_statemachine_decoder;
 
+
   tx_bytecnt_statemachine_decoder : process(tx_bytecnt_state, axi_lite_w_state,
                                             M_AXI_bvalid) is
   begin
-    rx_bytecnt_state_nxt <= rx_bytecnt_state;
+    tx_bytecnt_state_nxt <= tx_bytecnt_state;
 
     if axi_lite_w_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
       if tx_bytecnt_state = BLST then
@@ -182,15 +184,16 @@ begin
     end if;
   end process tx_bytecnt_statemachine_decoder;
 
+
   axi_lite_r_statemachine_decoder : process(axi_lite_r_state, axi_lite_w_state,
-                                            rx_bytecnt_state,
+                                            rx_bytecnt_state, snd_data_active,
                                             M_AXI_rdata, M_AXI_rvalid) is
   begin
     axi_lite_r_state_nxt <= axi_lite_r_state;
 
     case axi_lite_r_state is
       when AXI_IDLE =>
-        if axi_lite_w_state = AXI_IDLE then
+        if axi_lite_w_state = AXI_IDLE and snd_data_active /= '1' then
           axi_lite_r_state_nxt <= AXI_READ_REQ_STATUS;
         end if;
       when AXI_READ_REQ_STATUS =>
@@ -226,6 +229,7 @@ begin
   axi_lite_w_statemachine_decoder : process(axi_lite_w_state, axi_lite_r_state,
                                             snd_data_active,
                                             M_AXI_rdata, M_AXI_rvalid,
+                                            M_AXI_wready, M_AXI_awready,
                                             M_AXI_bvalid) is
   begin
     axi_lite_w_state_nxt <= axi_lite_w_state;
@@ -248,16 +252,19 @@ begin
           end if;
         end if;
       when AXI_WRITE_REQ_DATA =>
-        axi_lite_w_state_nxt <= AXI_WRITE_RESP;
+        if M_AXI_awready = '1' and M_AXI_wready = '1' then
+          axi_lite_w_state_nxt <= AXI_WRITE_RESP;
+        end if;
       when AXI_WRITE_RESP =>
         if M_AXI_bvalid = '1' then
-          axi_lite_w_state_nxt <= AXI_IDLE;
-        else
-          axi_lite_w_state_nxt <= AXI_READ_REQ_STATUS;
+          if tx_bytecnt_state = BLST then
+            axi_lite_w_state_nxt <= AXI_IDLE;
+          else
+            axi_lite_w_state_nxt <= AXI_READ_REQ_STATUS;
+          end if;
         end if;
       when others =>
         null;
-
     end case;
   end process axi_lite_w_statemachine_decoder;
 
@@ -275,7 +282,7 @@ begin
         axi_awaddr <= AXI_WRITE_TXBUF_ADDR;
         axi_awvalid <= '1';
       elsif axi_lite_w_state = AXI_WRITE_RESP then
-        if M_AXI_bvalid = '1' then
+        if M_AXI_awready = '1' then
           axi_awaddr <= (others => '0');
           axi_awvalid <= '0';
         end if;
@@ -314,7 +321,7 @@ begin
           axi_wdata(7 downto 0) <= ascii;
           axi_wvalid <= '1';
         when AXI_WRITE_RESP =>
-          if M_AXI_bvalid = '1' then
+          if M_AXI_wready = '1' then
             axi_wdata <= (others => '0');
             axi_wvalid <= '0';
           end if;
@@ -334,18 +341,11 @@ begin
     if rst_n = '0' then
       axi_bready <= '0';
     elsif rising_edge(clk) then
-      case axi_lite_w_state is
-        when AXI_IDLE =>
-          axi_bready <= '0';
-        when AXI_WRITE_REQ_DATA =>
-          axi_bready <= '1';
-        when AXI_WRITE_RESP =>
-          if M_AXI_bvalid = '1' then
-            axi_bready <= '0';
-          end if;
-        when others =>
-          null;
-      end case;
+      if axi_lite_w_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
+        axi_bready <= '1';
+      else
+        axi_bready <= '0';
+      end if;
     end if;
   end process axi_lite_write_resp_channel;
 
@@ -455,6 +455,7 @@ begin
     end if;
   end process rcv_reg_register;
 
+
   fill_data_proc : process(clk, rst_n) is
   begin
     if rst_n = '0' then
@@ -478,6 +479,7 @@ begin
       end if;
     end if;
   end process fill_data_proc;
+
 
   compute_next_address : process(fill_addr) is
     variable this_address : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
@@ -506,6 +508,7 @@ begin
     end if;
   end process rcv_data_active_proc;
 
+
   rcv_data_done_proc : process(clk, rst_n) is
     variable next_address : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
   begin
@@ -526,9 +529,7 @@ begin
 
   snd_data_active_proc : process(clk, rst_n) is
   begin
-    if rst_n = '0' then
-      snd_data_active <= '0';
-    elsif rising_edge(clk) then
+    if rising_edge(clk) then
       if cpu_reset = '1' then
         snd_data_active <= '1';
       end if;
@@ -545,12 +546,12 @@ begin
     if rst_n = '0' then
       snd_data_done <= '0';
     elsif rising_edge(clk) then
-      if cpu_reset = '1' then
+      if snd_data_active = '1' then
+        if tx_bytecnt_state = BLST and M_AXI_bvalid = '1' then
+          snd_data_done <= '1';
+        end if;
+      else
         snd_data_done <= '0';
-      end if;
-
-      if tx_bytecnt_state = BLST and M_AXI_bvalid = '1' then
-        snd_data_done <= '1';
       end if;
     end if;
   end process snd_data_done_proc;
