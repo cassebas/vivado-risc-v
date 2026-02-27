@@ -77,6 +77,7 @@ launch_runs blk_mem_gen_2_synth_1 -jobs 6
 
 add_files -norecurse {boot_device/boot_device.vhd boot_device/boot_device_axislave.vhd boot_device/boot_device_addrtranslator.vhd boot_device/boot_device_datafiller.vhd boot_device/boot_device_datarcv.vhd boot_device/blk_mem_gen_0.vhd boot_device/blk_mem_gen_1.vhd boot_device/blk_mem_gen_2.vhd}
 add_files -fileset constrs_1 -norecurse board/genesys2/uart_extra.xdc
+add_files -fileset constrs_1 -norecurse board/genesys2/leds.xdc
 update_compile_order -fileset sources_1
 
 open_bd_design ${project_dir}/genesys2-riscv.srcs/sources_1/bd/riscv/riscv.bd
@@ -108,6 +109,10 @@ endgroup
 startgroup
 connect_bd_net [get_bd_pins IO/boot_device_0/interrupt] [get_bd_pins IO/xlconcat_0/In3]
 endgroup
+startgroup
+create_bd_pin -dir O -from 7 -to 0 IO/led_out
+endgroup
+connect_bd_net [get_bd_pins IO/boot_device_0/led_out] [get_bd_pins IO/led_out]
 
 startgroup
 create_bd_port -dir O usb_uart_extra_rtsn
@@ -125,6 +130,8 @@ startgroup
 create_bd_port -dir I usb_uart_extra_ctsn
 connect_bd_net [get_bd_ports usb_uart_extra_ctsn] [get_bd_pins IO/usb_uart_extra_ctsn]
 endgroup
+create_bd_port -dir O -from 7 -to 0 led_out
+connect_bd_net [get_bd_ports led_out] [get_bd_pins IO/led_out]
 
 assign_bd_address [get_bd_addr_segs {IO/boot_device_0/S00_AXI/reg0}]
 set_property offset 0x60050000 [get_bd_addr_segs {RocketChip/IO_AXI4/SEG_boot_device_0_reg0}]

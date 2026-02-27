@@ -17,6 +17,9 @@ entity boot_device is
         rtsn_o    : out std_logic;
         interrupt : out std_logic;
 
+        -- LEDs (debug)
+        led_out : out std_logic_vector(7 downto 0);
+
         S00_AXI_aclk    : in std_logic;  --  AXI clock
         S00_AXI_aresetn : in std_logic;  --  AXI reset, active low
 
@@ -150,6 +153,7 @@ architecture behavior of boot_device is
     port (clk             : in std_logic;
           rst_n           : in std_logic;
           cpu_reset       : in std_logic;
+          led_out         : out std_logic_vector(7 downto 0);
           uart_rx         : in std_logic;
           uart_tx         : out std_logic;
           uart_ctsn       : in std_logic;
@@ -286,6 +290,7 @@ begin
         clk         => S00_AXI_aclk,
         rst_n       => S00_AXI_aresetn,
         cpu_reset   => cpu_reset,
+        led_out     => led_out,
         uart_rx     => rx_i,
         uart_tx     => tx_o,
         uart_ctsn   => ctsn_i,

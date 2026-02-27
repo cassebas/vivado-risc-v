@@ -13,6 +13,7 @@ entity boot_device_datafiller is
   port (clk         : in std_logic;
         rst_n       : in std_logic;
         cpu_reset   : in std_logic;
+        led_out     : out std_logic_vector(7 downto 0);
         uart_rx     : in std_logic;
         uart_tx     : out std_logic;
         uart_ctsn   : in std_logic;
@@ -65,6 +66,9 @@ architecture structural of boot_device_datafiller is
           -- means that this component should first send the
           -- "START" command to the host computer.
           cpu_reset     : in std_logic;
+
+          -- LEDs (debug)
+          led_out : out std_logic_vector(7 downto 0);
 
           --
           -- AXI Lite master ports
@@ -149,6 +153,7 @@ begin
     port map (clk           => clk,
               rst_n         => rst_n,
               cpu_reset     => cpu_reset,
+              led_out       => led_out,
               M_AXI_awaddr  => axi_awaddr,
               M_AXI_awvalid => axi_awvalid,
               M_AXI_awready => axi_awready,

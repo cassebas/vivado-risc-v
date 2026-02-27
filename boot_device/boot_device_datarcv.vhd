@@ -17,6 +17,9 @@ entity boot_device_datarcv is
         -- "START" command to the host computer.
         cpu_reset     : in std_logic;
 
+        -- LEDs (debug)
+        led_out : out std_logic_vector(7 downto 0);
+
         --
         -- AXI Lite master ports
         --
@@ -577,5 +580,47 @@ begin
   M_AXI_arvalid <= axi_arvalid;
   -- AXI Lite Read Data channel
   M_AXI_rready  <= axi_rready;
+
+
+  axi_lite_state_led : process(axi_lite_w_state, axi_lite_r_state,
+                               tx_bytecnt_state, rx_bytecnt_state,
+                               snd_data_active) is
+  begin
+    if snd_data_active = '1' then
+      led_out(0) <= '1';
+    else
+      led_out(0) <= '0';
+    end if;
+
+    if rx_bytecnt_state = "000" then
+      led_out(1) <= '1';
+    else
+      led_out(1) <= '0';
+    end if;
+
+    case axi_lite_r_state is
+      when AXI_IDLE =>
+        led_out(4 downto 2) <= (2 => '1', others => '0');
+      when AXI_READ_DATA_STATUS =>
+        led_out(4 downto 2) <= (3 => '1', others => '0');
+      when AXI_READ_DATA_BUFFER =>
+        led_out(4 downto 2) <= (4 => '1', others => '0');
+      when others =>
+        led_out(4 downto 2) <= (others => '0');
+    end case;
+
+    case axi_lite_w_state is
+      when AXI_IDLE =>
+        led_out(7 downto 5) <= (5 => '1', others => '0');
+      when AXI_READ_REQ_STATUS =>
+        led_out(7 downto 5) <= (6 => '1', others => '0');
+      when AXI_WRITE_REQ_DATA =>
+        led_out(7 downto 5) <= (7 => '1', others => '0');
+      when others =>
+        led_out(7 downto 5) <= (others => '0');
+    end case;
+
+  end process axi_lite_state_led;
+
 
 end architecture behavior;
