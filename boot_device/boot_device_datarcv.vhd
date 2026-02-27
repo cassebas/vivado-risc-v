@@ -71,7 +71,11 @@ architecture behavior of boot_device_datarcv is
   signal fill_data : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
   signal load_data, next_addr : std_logic;
 
-  constant MAX_ADDR : integer := 2**BRAM_ADDR_WIDTH - 1;
+  -- constant MAX_ADDR : integer := 2**BRAM_ADDR_WIDTH - 1;
+  -- TESTING: Smaller maximum address (for 14 bits) is 00_0011_1111_1111 (1023)
+  -- after 64 runs index will reach 1023, 65th run will start from the other
+  -- block RAM.
+  constant MAX_ADDR : integer := 2**10 - 1;
 
   -- For counting the sent bytes we will need 2 bits, because a
   -- maximum of 4 bytes will be sent.
