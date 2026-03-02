@@ -125,7 +125,7 @@ architecture structural of boot_device_datafiller is
 begin
 
   uart_0 : uart
-    port map (async_resetn  => axi_reset,
+    port map (async_resetn  => rst_n,
               clock         => clk,
               s_axi_awaddr  => axi_awaddr,
               s_axi_awvalid => axi_awvalid,
