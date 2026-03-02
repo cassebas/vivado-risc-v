@@ -8,17 +8,17 @@ entity boot_device is
   generic (S_AXI_DATA_WIDTH : integer   := 32;
            S_AXI_ADDR_WIDTH : integer   := 16);
 
-  port (cpu_reset : in std_logic;  --  CPU reset, active low
+  port (cpu_reset       : in std_logic;  --  CPU reset, active low
 
         -- UART
-        rx_i      : in std_logic;
-        tx_o      : out std_logic;
-        ctsn_i    : in std_logic;
-        rtsn_o    : out std_logic;
-        interrupt : out std_logic;
+        rx_i            : in std_logic;
+        tx_o            : out std_logic;
+        ctsn_i          : in std_logic;
+        rtsn_o          : out std_logic;
+        interrupt       : out std_logic;
 
         -- LEDs (debug)
-        led_out : out std_logic_vector(7 downto 0);
+        led_out         : out std_logic_vector(7 downto 0);
 
         S00_AXI_aclk    : in std_logic;  --  AXI clock
         S00_AXI_aresetn : in std_logic;  --  AXI reset, active low

@@ -48,18 +48,18 @@ architecture structural of boot_device_datafiller is
           s_axi_rready  : in std_logic;
 
           -- Interrupts
-          interrupt : out std_logic;
+          interrupt     : out std_logic;
 
           -- RS232
-          TxD  : out std_logic;
-          RxD  : in std_logic;
-          RTSn : out std_logic;
-          CTSn : in std_logic);
+          TxD           : out std_logic;
+          RxD           : in std_logic;
+          RTSn          : out std_logic;
+          CTSn          : in std_logic);
     end component uart;
 
   component boot_device_datarcv is
-    port (clk : in std_logic;
-          rst_n : in std_logic;
+    port (clk           : in std_logic;
+          rst_n         : in std_logic;
 
           -- This signal indicates the start of a new sequence of
           -- repetitions, where the two BlockRAMs are swapped. This
@@ -68,7 +68,7 @@ architecture structural of boot_device_datafiller is
           cpu_reset     : in std_logic;
 
           -- LEDs (debug)
-          led_out : out std_logic_vector(7 downto 0);
+          led_out       : out std_logic_vector(7 downto 0);
 
           --
           -- AXI Lite master ports
@@ -117,10 +117,6 @@ architecture structural of boot_device_datafiller is
   signal axi_rresp   : std_logic_vector(1 downto 0);
   signal axi_rvalid  : std_logic;
   signal axi_rready  : std_logic;
-
-  signal rx, tx, rtsn, ctsn : std_logic;
-
-  signal axi_reset : std_logic;
 
 begin
 
