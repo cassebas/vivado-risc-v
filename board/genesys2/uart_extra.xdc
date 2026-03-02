@@ -16,7 +16,7 @@
 #    pin01   |       ~RTS             | usb_uart_extra_ctsn |     AC26
 #    pin02   |        RXD             | usb_uart_extra_txd  |     AJ27
 #    pin03   |        TXD             | usb_uart_extra_rxd  |     AH30
-#    pin04   |       ~CTS             | usb_uart_extra_ctsn |     AK29
+#    pin04   |       ~CTS             | usb_uart_extra_rtsn |     AK29
 #    pin05   |        GND             |         -           |       -
 #    pin06   |        VCC             |         -           |       -
 #  -------------------------------------------------------------------------
