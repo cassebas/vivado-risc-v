@@ -381,10 +381,11 @@ begin
       if soft_reset = '1' then
         axi_bready <= '0';
       else
-        if axi_lite_w_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
-          axi_bready <= '1';
-        else
-          axi_bready <= '0';
+        axi_bready <= '0';
+        if axi_lite_w_state = AXI_WRITE_RESP then
+          if M_AXI_bvalid = '1' or axi_bready = '1' then
+            axi_bready <= '1';
+          end if;
         end if;
       end if;
     end if;
@@ -557,8 +558,10 @@ begin
         snd_data_done <= '0';
       else
         if snd_data_active = '1' then
-          if tx_bytecnt_state = BLST and M_AXI_bvalid = '1' then
-            snd_data_done <= '1';
+          if axi_lite_w_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
+            if tx_bytecnt_state = BLST then
+              snd_data_done <= '1';
+            end if;
           end if;
         end if;
       end if;
