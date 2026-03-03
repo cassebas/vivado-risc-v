@@ -134,11 +134,8 @@ begin
 
       -- Reset from the reset control component? (cpu_reset_n is active *low*)
       if cpu_reset_n = '0' then
-        if reset_count = 0 then
-          logic_rst_n <= '0';
-        end if;
-
         if reset_count = MAX_ADDR then
+          logic_rst_n <= '0';
           reset_count <= (others => '0');
         else
           reset_count <= reset_count + 1;
