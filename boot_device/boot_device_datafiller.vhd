@@ -65,7 +65,7 @@ architecture structural of boot_device_datafiller is
           -- repetitions, where the two BlockRAMs are swapped. This
           -- means that this component should first send the
           -- "START" command to the host computer.
-          cpu_reset_n   : in std_logic;
+          logic_rst_n   : in std_logic;
 
           -- LEDs (debug)
           led_out       : out std_logic_vector(7 downto 0);
@@ -118,10 +118,39 @@ architecture structural of boot_device_datafiller is
   signal axi_rvalid  : std_logic;
   signal axi_rready  : std_logic;
 
+  -- constant MAX_ADDR : integer := 2**BRAM_ADDR_WIDTH - 1;
+  -- TESTING: Smaller maximum address (for 14 bits) is 00_0011_1111_1111 (1023)
+  -- after 64 runs index will reach 1023, 65th run will start from the other
+  -- block RAM.
+  constant MAX_ADDR : integer := 2**6 - 1;
+
+  signal reset_count : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (others => '0');
+  signal logic_rst_n : std_logic;
+
 begin
+  reset_counter : process(clk) is
+  begin
+    if rising_edge(clk) then
+      logic_rst_n <= '1';
+
+      -- Reset from the reset control component? (cpu_reset_n is active *low*)
+      if cpu_reset_n = '0' then
+        if reset_count = 0 then
+          logic_rst_n <= '0';
+        end if;
+
+        if reset_count = MAX_ADDR then
+          reset_count <= (others => '0');
+        else
+          reset_count <= reset_count + 1;
+        end if;
+      end if;
+    end if;
+  end process reset_counter;
+
 
   uart_0 : uart
-    port map (async_resetn  => rst_n,
+    port map (async_resetn  => logic_rst_n,
               clock         => clk,
               s_axi_awaddr  => axi_awaddr,
               s_axi_awvalid => axi_awvalid,
@@ -148,7 +177,7 @@ begin
   boot_device_datarcv_0 : boot_device_datarcv
     port map (clk           => clk,
               rst_n         => rst_n,
-              cpu_reset_n   => cpu_reset_n,
+              logic_rst_n   => logic_rst_n,
               led_out       => led_out,
               M_AXI_awaddr  => axi_awaddr,
               M_AXI_awvalid => axi_awvalid,

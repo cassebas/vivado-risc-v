@@ -16,7 +16,7 @@ entity boot_device_datarcv is
         -- means that this component should first send the
         -- "START" command to the host computer.
         -- The cpu_reset_n signal is active *low*
-        cpu_reset_n   : in std_logic;
+        logic_rst_n   : in std_logic;
 
         -- LEDs (debug)
         led_out : out std_logic_vector(7 downto 0);
@@ -155,34 +155,12 @@ architecture behavior of boot_device_datarcv is
   signal rcv_data_active : std_logic := '0';
   signal rcv_data_done   : std_logic := '0';
 
-  signal reset_count : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (others => '0');
-  signal soft_reset  : std_logic;
 
 begin
-  reset_counter : process(clk) is
-  begin
-    if rising_edge(clk) then
-      soft_reset <= '0';
-
-      -- Reset from the reset control component? (cpu_reset_n is active *low*)
-      if cpu_reset_n = '0' then
-        if reset_count = 0 then
-          soft_reset <= '1';
-        end if;
-
-        if reset_count = MAX_ADDR then
-          reset_count <= (others => '0');
-        else
-          reset_count <= reset_count + 1;
-        end if;
-      end if;
-    end if;
-  end process reset_counter;
-
   statemachine_register : process(clk) is
   begin
     if rising_edge(clk) then
-      if soft_reset = '1' then
+      if logic_rst_n = '0' then
         rx_bytecnt_state <= BFST;
         tx_bytecnt_state <= BFST;
         axi_lite_r_state <= AXI_IDLE;
@@ -325,7 +303,7 @@ begin
   axi_lite_write_req_channel : process(clk) is
   begin
     if rising_edge(clk) then
-      if soft_reset = '1' then
+      if logic_rst_n = '0' then
         axi_awaddr <= (others => '0');
         axi_awvalid <= '0';
       else
@@ -349,7 +327,7 @@ begin
     variable ascii : std_logic_vector(7 downto 0);
   begin
     if rising_edge(clk) then
-      if soft_reset = '1' then
+      if logic_rst_n = '0' then
         axi_wdata <= (others => '0');
         axi_wvalid <= '0';
       else
@@ -379,7 +357,7 @@ begin
   axi_lite_write_resp_channel : process(clk) is
   begin
     if rising_edge(clk) then
-      if soft_reset = '1' then
+      if logic_rst_n = '0' then
         axi_bready <= '0';
         axi_bvalid <= '0';
       else
@@ -410,7 +388,7 @@ begin
   axi_lite_read_req_channel : process(clk) is
   begin
     if rising_edge(clk) then
-      if soft_reset = '1' then
+      if logic_rst_n = '0' then
         axi_araddr <= (others => '0');
         axi_arvalid <= '0';
       else
@@ -437,7 +415,7 @@ begin
   axi_lite_read_data_channel : process(clk) is
   begin
     if rising_edge(clk) then
-      if soft_reset = '1' then
+      if logic_rst_n = '0' then
         axi_rready <= '0';
       else
         axi_rready <= '0';
@@ -469,7 +447,7 @@ begin
   rcv_tmp_register : process(clk) is
   begin
     if rising_edge(clk) then
-      if soft_reset = '1' then
+      if logic_rst_n = '0' then
         rcv_tmp <= (others => '0');
       else
         if axi_lite_r_state = AXI_READ_DATA_BUFFER and M_AXI_rvalid = '1' then
@@ -489,7 +467,7 @@ begin
   rcv_reg_register : process(clk) is
   begin
     if rising_edge(clk) then
-      if soft_reset = '1' then
+      if logic_rst_n = '0' then
         rcv_reg <= (others => '0');
         rcv_tmp_ready <= '0';
       else
@@ -512,7 +490,7 @@ begin
   fill_data_proc : process(clk) is
   begin
     if rising_edge(clk) then
-      if soft_reset = '1' then
+      if logic_rst_n = '0' then
         fill_wea <= (others => '0');
         fill_addr <= (others => '0');
         fill_data <= (others => '0');
@@ -551,7 +529,7 @@ begin
   snd_data_active_proc : process(clk) is
   begin
     if rising_edge(clk) then
-      if soft_reset = '1' then
+      if logic_rst_n = '0' then
         snd_data_active <= '1';
       end if;
 
@@ -565,7 +543,7 @@ begin
   snd_data_done_proc : process(clk) is
   begin
     if rising_edge(clk) then
-      if soft_reset = '1' then
+      if logic_rst_n = '0' then
         snd_data_done <= '0';
       else
         if snd_data_active = '1' then
