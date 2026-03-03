@@ -6,11 +6,11 @@ use ieee.math_real.log2;
 
 
 entity reset_control is
-  port (clk       : in std_logic;
-        aresetn   : in std_logic;
-        cmd_in    : in std_logic_vector(31 downto 0);
+  port (clk         : in std_logic;
+        aresetn     : in std_logic;
+        cmd_in      : in std_logic_vector(31 downto 0);
         -- led_out   : out std_logic_vector(7 downto 0);
-        cpu_reset : out std_logic);
+        cpu_reset_n : out std_logic);
 end reset_control;
 
 
@@ -92,21 +92,21 @@ begin
   begin
     if rising_edge(clk) then
       if aresetn = '0' then
-        cpu_reset <= '1';
+        cpu_reset_n <= '1';
         reset_periods := 0;
         reset_inhibit := 0;
       else
         if reset_periods > 0 then
           reset_periods := reset_periods - 1;
-          cpu_reset <= '0';
+          cpu_reset_n <= '0';
         elsif reset_inhibit > 0 then
           reset_inhibit := reset_inhibit - 1;
-          cpu_reset <= '1';
+          cpu_reset_n <= '1';
         elsif cmd = CMD_RESET then
           -- Reset request
           reset_periods := RST_CLK_PERIODS-1;
           reset_inhibit := RST_CLK_INHIBIT-1;
-          cpu_reset <= '0';
+          cpu_reset_n <= '0';
         end if;
       end if;
     end if;

@@ -15,8 +15,8 @@ entity boot_device_datarcv is
         -- repetitions, where the two BlockRAMs are swapped. This
         -- means that this component should first send the
         -- "START" command to the host computer.
-        -- The cpu_reset signal is active *low*
-        cpu_reset     : in std_logic;
+        -- The cpu_reset_n signal is active *low*
+        cpu_reset_n   : in std_logic;
 
         -- LEDs (debug)
         led_out : out std_logic_vector(7 downto 0);
@@ -164,8 +164,8 @@ begin
     if rising_edge(clk) then
       soft_reset <= '0';
 
-      -- Reset from the reset control component? (cpu_reset is active *low*)
-      if cpu_reset = '0' then
+      -- Reset from the reset control component? (cpu_reset_n is active *low*)
+      if cpu_reset_n = '0' then
         if reset_count = 0 then
           soft_reset <= '1';
         end if;

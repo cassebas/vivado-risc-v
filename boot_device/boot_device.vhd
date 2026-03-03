@@ -8,7 +8,7 @@ entity boot_device is
   generic (S_AXI_DATA_WIDTH : integer   := 32;
            S_AXI_ADDR_WIDTH : integer   := 16);
 
-  port (cpu_reset       : in std_logic;  --  CPU reset, active low
+  port (cpu_reset_n     : in std_logic;  --  CPU reset, active low
 
         -- UART
         rx_i            : in std_logic;
@@ -135,7 +135,7 @@ architecture behavior of boot_device is
   component boot_device_addrtranslator is
     port (clk                  : in std_logic;
           rst_n                : in std_logic;
-          cpu_reset            : in std_logic;
+          cpu_reset_n          : in std_logic;
           tr_wea_i             : in std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
           tr_addr_i            : in std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
           tr_data_i            : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
@@ -152,7 +152,7 @@ architecture behavior of boot_device is
   component boot_device_datafiller is
     port (clk             : in std_logic;
           rst_n           : in std_logic;
-          cpu_reset       : in std_logic;
+          cpu_reset_n     : in std_logic;
           led_out         : out std_logic_vector(7 downto 0);
           uart_rx         : in std_logic;
           uart_tx         : out std_logic;
@@ -272,7 +272,7 @@ begin
   boot_dev_addrtranslator_0 : boot_device_addrtranslator
     port map (clk                  => S00_AXI_aclk,
               rst_n                => S00_AXI_aresetn,
-              cpu_reset            => cpu_reset,
+              cpu_reset_n          => cpu_reset_n,
               tr_wea_i             => wea,
               tr_addr_i            => addr,
               tr_data_i            => data_write,
@@ -289,7 +289,7 @@ begin
     port map (
         clk         => S00_AXI_aclk,
         rst_n       => S00_AXI_aresetn,
-        cpu_reset   => cpu_reset,
+        cpu_reset_n => cpu_reset_n,
         led_out     => led_out,
         uart_rx     => rx_i,
         uart_tx     => tx_o,

@@ -14,7 +14,7 @@ entity boot_device_addrtranslator is
 
   port (clk                  : in std_logic;
         rst_n                : in std_logic;
-        cpu_reset            : in std_logic;
+        cpu_reset_n          : in std_logic;
         tr_wea_i             : in std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
         tr_addr_i            : in std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
         tr_data_i            : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
@@ -82,7 +82,7 @@ begin
   compute_offset : process (clk) is
   begin
     if rising_edge(clk) then
-      if cpu_reset = '0' then
+      if cpu_reset_n = '0' then
         -- Only increase offset upon a *new* reset event
         if reset_active = '0' then
           addr_idx_offset <= addr_idx_offset_nxt;
