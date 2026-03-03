@@ -7,7 +7,9 @@ entity boot_device_datarcv is
            BRAM_ADDR_WIDTH : integer := 14;
            BRAM_DATA_WIDTH : integer := 32;
            UART_ADDR_WIDTH : integer := 16;
-           UART_DATA_WIDTH : integer := 32);
+           UART_DATA_WIDTH : integer := 32;
+           BRAM_SIZE       : integer := 2**10);
+
   port (clk           : in std_logic;
         rst_n         : in std_logic;
 
@@ -76,11 +78,7 @@ architecture behavior of boot_device_datarcv is
   signal load_data : std_logic;
   signal next_addr : std_logic;
 
-  -- constant MAX_ADDR : integer := 2**BRAM_ADDR_WIDTH - 1;
-  -- TESTING: Smaller maximum address (for 14 bits) is 00_0011_1111_1111 (1023)
-  -- after 64 runs index will reach 1023, 65th run will start from the other
-  -- block RAM.
-  constant MAX_ADDR : integer := 2**6 - 1;
+  constant MAX_ADDR : integer := BRAM_SIZE - 1;
 
   constant B0   : unsigned(1 downto 0) := "00";
   constant B1   : unsigned(1 downto 0) := "01";

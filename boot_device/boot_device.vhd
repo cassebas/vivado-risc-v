@@ -6,7 +6,8 @@ use ieee.numeric_std.all;
 entity boot_device is
 
   generic (S_AXI_DATA_WIDTH : integer   := 32;
-           S_AXI_ADDR_WIDTH : integer   := 16);
+           S_AXI_ADDR_WIDTH : integer   := 16;
+           BRAM_SIZE        : integer   := 2**7);
 
   port (cpu_reset_n     : in std_logic;  --  CPU reset, active low
 
@@ -133,6 +134,8 @@ architecture behavior of boot_device is
   end component boot_device_axislave;
 
   component boot_device_addrtranslator is
+    generic (BRAM_SIZE : integer);
+
     port (clk                  : in std_logic;
           rst_n                : in std_logic;
           cpu_reset_n          : in std_logic;
@@ -150,6 +153,8 @@ architecture behavior of boot_device is
   end component;
 
   component boot_device_datafiller is
+    generic (BRAM_SIZE : integer);
+
     port (clk             : in std_logic;
           rst_n           : in std_logic;
           cpu_reset_n     : in std_logic;
@@ -269,7 +274,10 @@ begin
               S_AXI_rvalid  => s00_axi_rvalid,
               S_AXI_rready  => s00_axi_rready);
 
+
   boot_dev_addrtranslator_0 : boot_device_addrtranslator
+    generic map (BRAM_SIZE => BRAM_SIZE)
+
     port map (clk                  => S00_AXI_aclk,
               rst_n                => S00_AXI_aresetn,
               cpu_reset_n          => cpu_reset_n,
@@ -285,7 +293,10 @@ begin
               appdata_mux_ctrl_o   => appdata_mux_ctrl,
               inputdata_mux_ctrl_o => inputdata_mux_ctrl);
 
+
   boot_device_datafiller_0 : boot_device_datafiller
+    generic map (BRAM_SIZE => BRAM_SIZE)
+
     port map (
         clk         => S00_AXI_aclk,
         rst_n       => S00_AXI_aresetn,
@@ -300,7 +311,8 @@ begin
         fill_addr_o => write_addr,
         fill_data_o => write_data);
 
-    blk_mem_gen_0_instance : blk_mem_gen_0
+
+  blk_mem_gen_0_instance : blk_mem_gen_0
     port map (clka  => S00_AXI_aclk,
               wea   => app_wea,
               addra => app_addr,
@@ -321,11 +333,13 @@ begin
               dina  => input_data2,
               douta => input_data2_read);
 
+
   data_read <= app_data_read when appdata_mux_ctrl = '0' else
                input_data_read;
 
   input_data_read <= input_data1_read when inputdata_mux_ctrl = '0' else
                      input_data2_read;
+
 
   inputdata_bram_muxes : process (inputdata_mux_ctrl) is
   begin
