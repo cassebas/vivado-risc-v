@@ -62,21 +62,19 @@ architecture behavior of boot_device_datarcv is
                                AXI_READ_DATA_BUFFER,
                                AXI_WRITE_REQ_DATA,
                                AXI_WRITE_RESP);
-  signal axi_lite_r_state : axi_lite_state_type := AXI_IDLE;
-  signal axi_lite_r_state_nxt : axi_lite_state_type;
-  signal axi_lite_w_state : axi_lite_state_type := AXI_IDLE;
-  signal axi_lite_w_state_nxt : axi_lite_state_type;
+  signal axi_lite_r_state, axi_lite_r_state_nxt : axi_lite_state_type;
+  signal axi_lite_w_state, axi_lite_w_state_nxt : axi_lite_state_type;
 
-  signal rcv_reg : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0) := (others => '0');
-  signal rcv_tmp : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0) := (others => '0');
-  signal rcv_tmp_ready : std_logic := '0';
+  signal rcv_reg : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+  signal rcv_tmp : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+  signal rcv_tmp_ready : std_logic;
 
-  signal fill_wea  : std_logic_vector(BRAM_WEA_WIDTH-1 downto 0) := (others => '0');
-  signal fill_addr : std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0) := (others => '0');
+  signal fill_wea  : std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+  signal fill_addr : std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
   signal fill_addr_next : std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
-  signal fill_data : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0) := (others => '0');
-  signal load_data : std_logic := '0';
-  signal next_addr : std_logic := '0';
+  signal fill_data : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+  signal load_data : std_logic;
+  signal next_addr : std_logic;
 
   -- constant MAX_ADDR : integer := 2**BRAM_ADDR_WIDTH - 1;
   -- TESTING: Smaller maximum address (for 14 bits) is 00_0011_1111_1111 (1023)
@@ -96,16 +94,14 @@ architecture behavior of boot_device_datarcv is
   -- The bytes received are:
   --  B0  -> first byte
   --  B3  -> last byte
-  signal tx_bytecnt_state : unsigned(1 downto 0) := BFST;
-  signal tx_bytecnt_state_nxt : unsigned(1 downto 0);
+  signal tx_bytecnt_state, tx_bytecnt_state_nxt : unsigned(1 downto 0);
 
   -- For counting the received bytes we will need 2 bits, because a
   -- maximum of 4 bytes will be received.
   -- The bytes received are:
   --  B0  -> first byte
   --  B3  -> last byte
-  signal rx_bytecnt_state : unsigned(1 downto 0) := BFST;
-  signal rx_bytecnt_state_nxt : unsigned(1 downto 0);
+  signal rx_bytecnt_state, rx_bytecnt_state_nxt : unsigned(1 downto 0);
 
   -- Some named constants for the fixed command to be sent
   constant CMD_B0 : std_logic_vector(7 downto 0) := "00110101"; -- '5' (ASCII: 53)
@@ -117,22 +113,24 @@ architecture behavior of boot_device_datarcv is
   -- AXI Lite signals
   --
   -- AXI Lite Write Request channel
-  signal axi_awaddr  : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
-    (others => '0');
-  signal axi_awvalid : std_logic := '0';
+  signal axi_awaddr  : std_logic_vector(UART_ADDR_WIDTH-1 downto 0);
+  signal axi_awvalid : std_logic;
+  signal axi_awready : std_logic;
   -- AXI Lite Write Data channel
-  signal axi_wdata   : std_logic_vector(UART_DATA_WIDTH-1 downto 0) :=
-    (others => '0');
-  signal axi_wvalid  : std_logic := '0';
+  signal axi_wdata   : std_logic_vector(UART_DATA_WIDTH-1 downto 0);
+  signal axi_wvalid  : std_logic;
+  signal axi_wready  : std_logic;
   -- AXI Lite Write Response channel
-  signal axi_bready  : std_logic := '0';
   signal axi_bvalid  : std_logic;
+  signal axi_bready  : std_logic;
   -- AXI Lite Read Request channel
-  signal axi_araddr  : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
-    (others => '0');
-  signal axi_arvalid : std_logic := '0';
+  signal axi_araddr  : std_logic_vector(UART_ADDR_WIDTH-1 downto 0);
+  signal axi_arvalid : std_logic;
+  signal axi_arready : std_logic;
   -- AXI Lite Read Data channel
-  signal axi_rready  : std_logic := '0';
+  signal axi_rdata   : std_logic_vector(UART_DATA_WIDTH-1 downto 0);
+  signal axi_rvalid  : std_logic;
+  signal axi_rready  : std_logic;
 
 
   -- Read from UART rx buffer: address is 4'h00
@@ -148,13 +146,8 @@ architecture behavior of boot_device_datarcv is
   constant AXI_WRITE_CTRL_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
     (3 => '1', 2 => '1', others => '0');
 
-  -- Initialize this signal as active, such that the component will start
-  -- sending the command to the host computer.
-  signal snd_data_active : std_logic := '0';
-  signal snd_data_done   : std_logic := '0';
-  signal rcv_data_active : std_logic := '0';
-  signal rcv_data_done   : std_logic := '0';
-
+  signal snd_data_active : std_logic;
+  signal snd_data_done   : std_logic;
 
 begin
   statemachine_register : process(clk) is
@@ -176,11 +169,11 @@ begin
 
 
   rx_bytecnt_statemachine_decoder : process(rx_bytecnt_state, axi_lite_r_state,
-                                            M_AXI_rvalid) is
+                                            axi_rvalid) is
   begin
     rx_bytecnt_state_nxt <= rx_bytecnt_state;
 
-    if axi_lite_r_state = AXI_READ_DATA_BUFFER and M_AXI_rvalid = '1' then
+    if axi_lite_r_state = AXI_READ_DATA_BUFFER and axi_rvalid = '1' then
       if rx_bytecnt_state = BLST then
         rx_bytecnt_state_nxt <= BFST;
       else
@@ -207,9 +200,7 @@ begin
 
   axi_lite_r_statemachine_decoder : process(axi_lite_r_state, axi_lite_w_state,
                                             rx_bytecnt_state, snd_data_active,
-                                            M_AXI_arready,
-                                            rx_bytecnt_state,
-                                            M_AXI_rdata, M_AXI_rvalid) is
+                                            axi_rdata, axi_rvalid, axi_arready) is
   begin
     axi_lite_r_state_nxt <= axi_lite_r_state;
 
@@ -219,17 +210,17 @@ begin
           axi_lite_r_state_nxt <= AXI_READ_REQ_STATUS;
         end if;
       when AXI_READ_REQ_STATUS =>
-        if M_AXI_arready = '1' then
+        if axi_arready = '1' then
           axi_lite_r_state_nxt <= AXI_READ_DATA_STATUS;
         end if;
       when AXI_READ_REQ_BUFFER =>
-        if M_AXI_arready = '1' then
+        if axi_arready = '1' then
           axi_lite_r_state_nxt <= AXI_READ_DATA_BUFFER;
         end if;
       when AXI_READ_DATA_STATUS =>
-        if M_AXI_rvalid = '1' then
+        if axi_rvalid = '1' then
           -- Check !rx_empty bit
-          if M_AXI_rdata(0) = '1' then
+          if axi_rdata(0) = '1' then
             -- There is data available!
             axi_lite_r_state_nxt <= AXI_READ_REQ_BUFFER;
           else
@@ -237,7 +228,7 @@ begin
           end if;
         end if;
       when AXI_READ_DATA_BUFFER =>
-        if M_AXI_rvalid = '1' then
+        if axi_rvalid = '1' then
           if rx_bytecnt_state = BLST then
             -- Now reading last byte, next state back to AXI_IDLE
             axi_lite_r_state_nxt <= AXI_IDLE;
@@ -252,11 +243,10 @@ begin
 
 
   axi_lite_w_statemachine_decoder : process(axi_lite_w_state, axi_lite_r_state,
-                                            snd_data_active,
-                                            M_AXI_arready,
-                                            M_AXI_rdata, M_AXI_rvalid,
-                                            M_AXI_wready, M_AXI_awready,
-                                            axi_bvalid, tx_bytecnt_state) is
+                                            snd_data_active, tx_bytecnt_state,
+                                            axi_arready, axi_awready,
+                                            axi_rdata, axi_rvalid,
+                                            axi_wready, axi_bvalid) is
   begin
     axi_lite_w_state_nxt <= axi_lite_w_state;
 
@@ -266,12 +256,12 @@ begin
           axi_lite_w_state_nxt <= AXI_READ_REQ_STATUS;
         end if;
       when AXI_READ_REQ_STATUS =>
-        if M_AXI_arready = '1' then
+        if axi_arready = '1' then
           axi_lite_w_state_nxt <= AXI_READ_DATA_STATUS;
         end if;
       when AXI_READ_DATA_STATUS =>
-        if M_AXI_rvalid = '1' then
-          if M_AXI_rdata(3) /= '1' then
+        if axi_rvalid = '1' then
+          if axi_rdata(3) /= '1' then
             -- tx buffer is not full
             axi_lite_w_state_nxt <= AXI_WRITE_REQ_DATA;
           else
@@ -280,7 +270,7 @@ begin
           end if;
         end if;
       when AXI_WRITE_REQ_DATA =>
-        if M_AXI_awready = '1' and M_AXI_wready = '1' then
+        if axi_awready = '1' and axi_wready = '1' then
           axi_lite_w_state_nxt <= AXI_WRITE_RESP;
         end if;
       when AXI_WRITE_RESP =>
@@ -306,13 +296,19 @@ begin
       if logic_rst_n = '0' then
         axi_awaddr <= (others => '0');
         axi_awvalid <= '0';
+        axi_awready <= '0';
       else
         if axi_lite_w_state = AXI_WRITE_REQ_DATA then
           axi_awaddr <= AXI_WRITE_TXBUF_ADDR;
           axi_awvalid <= '1';
+
+          if M_AXI_awready = '1' then
+            axi_awready <= '1';
+          end if;
         else
           axi_awaddr <= (others => '0');
           axi_awvalid <= '0';
+          axi_awready <= '0';
         end if;
       end if;
     end if;
@@ -330,6 +326,7 @@ begin
       if logic_rst_n = '0' then
         axi_wdata <= (others => '0');
         axi_wvalid <= '0';
+        axi_wready <= '0';
       else
         if axi_lite_w_state = AXI_WRITE_REQ_DATA then
           case tx_bytecnt_state is
@@ -341,9 +338,14 @@ begin
           axi_wdata(UART_DATA_WIDTH-1 downto 8) <= (others => '0');
           axi_wdata(7 downto 0) <= ascii;
           axi_wvalid <= '1';
+
+          if M_AXI_wready = '1' then
+            axi_wready <= '1';
+          end if;
         else
           axi_wdata <= (others => '0');
           axi_wvalid <= '0';
+          axi_wready <= '0';
         end if;
       end if;
     end if;
@@ -358,23 +360,17 @@ begin
   begin
     if rising_edge(clk) then
       if logic_rst_n = '0' then
-        axi_bready <= '0';
         axi_bvalid <= '0';
+        axi_bready <= '0';
       else
-        axi_bvalid <= '0';
-        if M_AXI_bvalid = '1' then
-          axi_bvalid <= '1';
-        end if;
-        axi_bready <= '0';
-
         if axi_lite_w_state = AXI_WRITE_RESP then
-          if axi_bvalid = '1' then
+          if M_AXI_bvalid = '1' then
             axi_bvalid <= '1';
-          end if;
-
-          if axi_bready = '1' then
             axi_bready <= '1';
           end if;
+        else
+          axi_bvalid <= '0';
+          axi_bready <= '0';
         end if;
       end if;
     end if;
@@ -391,18 +387,29 @@ begin
       if logic_rst_n = '0' then
         axi_araddr <= (others => '0');
         axi_arvalid <= '0';
+        axi_arready <= '0';
       else
-        -- Default
         if (axi_lite_w_state = AXI_READ_REQ_STATUS or
-            axi_lite_r_state = AXI_READ_REQ_STATUS) then
-          axi_araddr <= AXI_READ_STATUS_ADDR;
+            axi_lite_r_state = AXI_READ_REQ_STATUS or
+            axi_lite_r_state = AXI_READ_REQ_BUFFER) then
+
+          if (axi_lite_w_state = AXI_READ_REQ_STATUS or
+              axi_lite_r_state = AXI_READ_REQ_STATUS) then
+
+            axi_araddr <= AXI_READ_STATUS_ADDR;
+          else
+            axi_araddr <= AXI_READ_RXBUF_ADDR;
+          end if;
+
           axi_arvalid <= '1';
-        elsif axi_lite_r_state = AXI_READ_REQ_BUFFER then
-          axi_araddr <= AXI_READ_RXBUF_ADDR;
-          axi_arvalid <= '1';
+
+          if M_AXI_arready = '1' then
+            axi_arready <= '1';
+          end if;
         else
           axi_araddr <= (others => '0');
           axi_arvalid <= '0';
+          axi_arready <= '0';
         end if;
       end if;
     end if;
@@ -416,15 +423,23 @@ begin
   begin
     if rising_edge(clk) then
       if logic_rst_n = '0' then
+        axi_rdata <= (others => '0');
+        axi_rvalid <= '0';
         axi_rready <= '0';
       else
-        axi_rready <= '0';
-        if (axi_lite_r_state = AXI_READ_DATA_STATUS or
-            axi_lite_w_state = AXI_READ_DATA_STATUS or
+        if (axi_lite_w_state = AXI_READ_DATA_STATUS or
+            axi_lite_r_state = AXI_READ_DATA_STATUS or
             axi_lite_r_state = AXI_READ_DATA_BUFFER) then
+
           if M_AXI_rvalid = '1' then
+            axi_rdata <= M_AXI_rdata;
+            axi_rvalid <= M_AXI_rvalid;
             axi_rready <= '1';
           end if;
+        else
+          axi_rdata <= (others => '0');
+          axi_rvalid <= '0';
+          axi_rready <= '0';
         end if;
       end if;
     end if;
@@ -450,9 +465,9 @@ begin
       if logic_rst_n = '0' then
         rcv_tmp <= (others => '0');
       else
-        if axi_lite_r_state = AXI_READ_DATA_BUFFER and M_AXI_rvalid = '1' then
+        if axi_lite_r_state = AXI_READ_DATA_BUFFER and axi_rvalid = '1' then
           -- Copy lowest rdata byte into right most byte of rcv_tmp
-          rcv_tmp(rcv_tmp'low+7 downto rcv_tmp'low) <= M_AXI_rdata(7 downto 0);
+          rcv_tmp(rcv_tmp'low+7 downto rcv_tmp'low) <= axi_rdata(7 downto 0);
 
           -- Left shift rcv_tmp 8 bits
           for i in rcv_tmp'high-8 downto rcv_tmp'low loop
@@ -471,7 +486,7 @@ begin
         rcv_reg <= (others => '0');
         rcv_tmp_ready <= '0';
       else
-        if axi_lite_r_state = AXI_READ_DATA_BUFFER and M_AXI_rvalid = '1' then
+        if axi_lite_r_state = AXI_READ_DATA_BUFFER and axi_rvalid = '1' then
           if rx_bytecnt_state = BLST then
             -- Delay copying rcv_tmp to rcv_reg with 1 clock cycle
             rcv_tmp_ready <= '1';
@@ -584,46 +599,57 @@ begin
   fill_data_o <= fill_data;
 
 
-  axi_lite_state_led : process(axi_lite_w_state, axi_lite_r_state, tx_bytecnt_state,
+  axi_lite_state_led : process(axi_lite_w_state, axi_lite_r_state,
+                               tx_bytecnt_state, rx_bytecnt_state,
                                snd_data_active) is
   begin
     if snd_data_active = '1' then
       led_out(0) <= '1';
+
+      if tx_bytecnt_state /= "00" then
+        led_out(1) <= '1';
+      else
+        led_out(1) <= '0';
+      end if;
+
+      case axi_lite_w_state is
+        when AXI_IDLE =>
+          led_out(7 downto 2) <= (2 => '1', others => '0');
+        when AXI_READ_REQ_STATUS =>
+          led_out(7 downto 2) <= (3 => '1', others => '0');
+        when AXI_READ_DATA_STATUS =>
+          led_out(7 downto 2) <= (4 => '1', others => '0');
+        when AXI_WRITE_REQ_DATA =>
+          led_out(7 downto 2) <= (5 => '1', others => '0');
+        when AXI_WRITE_RESP =>
+          led_out(7 downto 2) <= (6 => '1', others => '0');
+        when others =>
+          led_out(7 downto 2) <= (others => '0');
+      end case;
     else
       led_out(0) <= '0';
+
+      if rx_bytecnt_state /= "00" then
+        led_out(1) <= '1';
+      else
+        led_out(1) <= '0';
+      end if;
+
+      case axi_lite_r_state is
+        when AXI_IDLE =>
+          led_out(7 downto 2) <= (2 => '1', others => '0');
+        when AXI_READ_REQ_STATUS =>
+          led_out(7 downto 2) <= (3 => '1', others => '0');
+        when AXI_READ_REQ_BUFFER =>
+          led_out(7 downto 2) <= (4 => '1', others => '0');
+        when AXI_READ_DATA_STATUS =>
+          led_out(7 downto 2) <= (5 => '1', others => '0');
+        when AXI_READ_DATA_BUFFER =>
+          led_out(7 downto 2) <= (6 => '1', others => '0');
+        when others =>
+          led_out(7 downto 2) <= (others => '0');
+      end case;
     end if;
-
-    if tx_bytecnt_state /= "00" then
-      led_out(1) <= '1';
-    else
-      led_out(1) <= '0';
-    end if;
-
-    case axi_lite_r_state is
-      when AXI_IDLE =>
-        led_out(4 downto 2) <= (2 => '1', others => '0');
-      when AXI_READ_DATA_STATUS =>
-        led_out(4 downto 2) <= (3 => '1', others => '0');
-      when AXI_READ_DATA_BUFFER =>
-        led_out(4 downto 2) <= (4 => '1', others => '0');
-      when others =>
-        led_out(4 downto 2) <= (others => '0');
-    end case;
-
-    case axi_lite_w_state is
-      when AXI_IDLE =>
-        led_out(7 downto 5) <= (5 => '1', others => '0');
-      when AXI_READ_REQ_STATUS =>
-        led_out(7 downto 5) <= (6 => '1', others => '0');
-      when AXI_READ_DATA_STATUS =>
-        led_out(7 downto 5) <= "110";
-      when AXI_WRITE_REQ_DATA =>
-        led_out(7 downto 5) <= (7 => '1', others => '0');
-      when AXI_WRITE_RESP =>
-        led_out(7 downto 5) <= "011";
-      when others =>
-        led_out(7 downto 5) <= (others => '0');
-    end case;
 
   end process axi_lite_state_led;
 
