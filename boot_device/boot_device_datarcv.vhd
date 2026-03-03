@@ -126,6 +126,7 @@ architecture behavior of boot_device_datarcv is
   signal axi_wvalid  : std_logic := '0';
   -- AXI Lite Write Response channel
   signal axi_bready  : std_logic := '0';
+  signal axi_bvalid  : std_logic;
   -- AXI Lite Read Request channel
   signal axi_araddr  : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
     (others => '0');
@@ -212,11 +213,11 @@ begin
 
 
   tx_bytecnt_statemachine_decoder : process(tx_bytecnt_state, axi_lite_w_state,
-                                            M_AXI_bvalid) is
+                                            axi_bvalid) is
   begin
     tx_bytecnt_state_nxt <= tx_bytecnt_state;
 
-    if axi_lite_w_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
+    if axi_lite_w_state = AXI_WRITE_RESP and axi_bvalid = '1' then
       if tx_bytecnt_state = BLST then
         tx_bytecnt_state_nxt <= BFST;
       else
@@ -277,7 +278,7 @@ begin
                                             M_AXI_arready,
                                             M_AXI_rdata, M_AXI_rvalid,
                                             M_AXI_wready, M_AXI_awready,
-                                            M_AXI_bvalid, tx_bytecnt_state) is
+                                            axi_bvalid, tx_bytecnt_state) is
   begin
     axi_lite_w_state_nxt <= axi_lite_w_state;
 
@@ -305,7 +306,7 @@ begin
           axi_lite_w_state_nxt <= AXI_WRITE_RESP;
         end if;
       when AXI_WRITE_RESP =>
-        if M_AXI_bvalid = '1' then
+        if axi_bvalid = '1' then
           if tx_bytecnt_state = BLST then
             axi_lite_w_state_nxt <= AXI_IDLE;
           else
@@ -380,10 +381,20 @@ begin
     if rising_edge(clk) then
       if soft_reset = '1' then
         axi_bready <= '0';
+        axi_bvalid <= '0';
       else
+        axi_bvalid <= '0';
+        if M_AXI_bvalid = '1' then
+          axi_bvalid <= '1';
+        end if;
         axi_bready <= '0';
+
         if axi_lite_w_state = AXI_WRITE_RESP then
-          if M_AXI_bvalid = '1' or axi_bready = '1' then
+          if axi_bvalid = '1' then
+            axi_bvalid <= '1';
+          end if;
+
+          if axi_bready = '1' then
             axi_bready <= '1';
           end if;
         end if;
@@ -558,7 +569,7 @@ begin
         snd_data_done <= '0';
       else
         if snd_data_active = '1' then
-          if axi_lite_w_state = AXI_WRITE_RESP and M_AXI_bvalid = '1' then
+          if axi_lite_w_state = AXI_WRITE_RESP and axi_bvalid = '1' then
             if tx_bytecnt_state = BLST then
               snd_data_done <= '1';
             end if;
