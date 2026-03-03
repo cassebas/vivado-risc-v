@@ -147,7 +147,6 @@ architecture behavior of boot_device_datarcv is
     (3 => '1', 2 => '1', others => '0');
 
   signal snd_data_active : std_logic;
-  signal snd_data_done   : std_logic;
 
 begin
   statemachine_register : process(clk) is
@@ -541,36 +540,22 @@ begin
   end process compute_next_address;
 
 
-  snd_data_active_proc : process(clk) is
+  snd_data_proc : process(clk) is
   begin
     if rising_edge(clk) then
       if logic_rst_n = '0' then
         snd_data_active <= '1';
-      end if;
-
-      if snd_data_done = '1' then
-        snd_data_active <= '0';
-      end if;
-    end if;
-  end process snd_data_active_proc;
-
-
-  snd_data_done_proc : process(clk) is
-  begin
-    if rising_edge(clk) then
-      if logic_rst_n = '0' then
-        snd_data_done <= '0';
       else
         if snd_data_active = '1' then
           if axi_lite_w_state = AXI_WRITE_RESP and axi_bvalid = '1' then
             if tx_bytecnt_state = BLST then
-              snd_data_done <= '1';
+              snd_data_active <= '0';
             end if;
           end if;
         end if;
       end if;
     end if;
-  end process snd_data_done_proc;
+  end process snd_data_proc;
 
 
   --
