@@ -12,7 +12,8 @@ entity boot_device_addrtranslator is
            INPUT_IDX_LO    : integer := 16#5C7#;
            INPUT_IDX_HI    : integer := 16#5D7# - 1;
 
-           BRAM_SIZE       : integer := 2**10);
+           BRAM_SIZE       : integer := 1024;
+           BLOCK_SIZE      : integer := 16);
 
   port (clk                  : in std_logic;
         rst_n                : in std_logic;
@@ -38,8 +39,6 @@ architecture structural of boot_device_addrtranslator is
   signal addr_idx_offset : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (others => '0');
   signal addr_idx_offset_nxt : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
 
-  -- Fixed size of 1 block size is 16
-  constant BLOCK_SIZE : integer := 16;
   constant MAX_OFFSET : integer := BRAM_SIZE - BLOCK_SIZE;
 
   signal reset_active : std_logic;

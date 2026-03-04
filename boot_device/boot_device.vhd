@@ -7,7 +7,8 @@ entity boot_device is
 
   generic (S_AXI_DATA_WIDTH : integer   := 32;
            S_AXI_ADDR_WIDTH : integer   := 16;
-           BRAM_SIZE        : integer   := 2**7);
+           BRAM_SIZE        : integer   := 1024;
+           BLOCK_SIZE       : integer   := 16);
 
   port (cpu_reset_n     : in std_logic;  --  CPU reset, active low
 
@@ -134,7 +135,8 @@ architecture behavior of boot_device is
   end component boot_device_axislave;
 
   component boot_device_addrtranslator is
-    generic (BRAM_SIZE : integer);
+    generic (BRAM_SIZE  : integer;
+             BLOCK_SIZE : integer);
 
     port (clk                  : in std_logic;
           rst_n                : in std_logic;
@@ -153,7 +155,8 @@ architecture behavior of boot_device is
   end component;
 
   component boot_device_datafiller is
-    generic (BRAM_SIZE : integer);
+    generic (BRAM_SIZE  : integer;
+             BLOCK_SIZE : integer);
 
     port (clk             : in std_logic;
           rst_n           : in std_logic;
@@ -276,7 +279,8 @@ begin
 
 
   boot_dev_addrtranslator_0 : boot_device_addrtranslator
-    generic map (BRAM_SIZE => BRAM_SIZE)
+    generic map (BRAM_SIZE  => BRAM_SIZE,
+                 BLOCK_SIZE => BLOCK_SIZE)
 
     port map (clk                  => S00_AXI_aclk,
               rst_n                => S00_AXI_aresetn,
@@ -295,7 +299,8 @@ begin
 
 
   boot_device_datafiller_0 : boot_device_datafiller
-    generic map (BRAM_SIZE => BRAM_SIZE)
+    generic map (BRAM_SIZE  => BRAM_SIZE,
+                 BLOCK_SIZE => BLOCK_SIZE)
 
     port map (
         clk         => S00_AXI_aclk,
