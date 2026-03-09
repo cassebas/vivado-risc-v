@@ -38,7 +38,7 @@ set_property -dict [list \
   CONFIG.Load_Init_File {true} \
   CONFIG.Read_Width_A {32} \
   CONFIG.Use_Byte_Write_Enable {true} \
-  CONFIG.Write_Depth_A {16384} \
+  CONFIG.Write_Depth_A {131072} \
   CONFIG.Write_Width_A {32} \
   CONFIG.use_bram_block {Stand_Alone} \
 ] [get_ips blk_mem_gen_1]
@@ -60,7 +60,7 @@ set_property -dict [list \
   CONFIG.Load_Init_File {true} \
   CONFIG.Read_Width_A {32} \
   CONFIG.Use_Byte_Write_Enable {true} \
-  CONFIG.Write_Depth_A {16384} \
+  CONFIG.Write_Depth_A {131072} \
   CONFIG.Write_Width_A {32} \
   CONFIG.use_bram_block {Stand_Alone} \
 ] [get_ips blk_mem_gen_2]
