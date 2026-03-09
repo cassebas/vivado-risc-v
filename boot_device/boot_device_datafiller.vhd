@@ -124,8 +124,9 @@ architecture structural of boot_device_datafiller is
 
   constant MAX_BLOCKS : integer := BRAM_SIZE / BLOCK_SIZE - 1;
 
-  signal reset_count : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (others => '0');
-  signal logic_rst_n : std_logic;
+  signal reset_count  : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (others => '0');
+  signal reset_active : std_logic;
+  signal logic_rst_n  : std_logic;
 
 begin
   reset_counter : process(clk) is
@@ -135,12 +136,18 @@ begin
 
       -- Reset from the reset control component? (cpu_reset_n is active *low*)
       if cpu_reset_n = '0' then
-        if reset_count = MAX_BLOCKS then
-          logic_rst_n <= '0';
-          reset_count <= (others => '0');
-        else
-          reset_count <= reset_count + 1;
+        -- Only increase offset upon a *new* reset event
+        if reset_active = '0' then
+          if reset_count = MAX_BLOCKS then
+            logic_rst_n <= '0';
+            reset_count <= (others => '0');
+          else
+            reset_count <= reset_count + 1;
+          end if;
+          reset_active <= '1';
         end if;
+      else
+        reset_active <= '0';
       end if;
     end if;
   end process reset_counter;
