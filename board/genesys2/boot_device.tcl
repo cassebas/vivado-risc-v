@@ -158,6 +158,17 @@ create_bd_port -dir O bbled2
 connect_bd_net [get_bd_ports bbled2] [get_bd_pins DDR/mem_ok]
 connect_bd_net [get_bd_ports bbled1] [get_bd_pins clk_wiz_0/locked]
 
+startgroup
+create_bd_cell -type ip -vlnv xilinx.com:ip:util_vector_logic:2.0 util_vector_logic_2
+endgroup
+set_property -dict [list \
+  CONFIG.C_OPERATION {not} \
+  CONFIG.C_SIZE {1} \
+] [get_bd_cells util_vector_logic_2]
+create_bd_port -dir O bbled3
+connect_bd_net [get_bd_pins IO/cpu_reset_n] [get_bd_pins util_vector_logic_2/Op1]
+connect_bd_net [get_bd_pins util_vector_logic_2/Res] [get_bd_ports bbled3]
+
 validate_bd_design
 save_bd_design
 reset_run riscv_axi_smc_1_0_synth_1
