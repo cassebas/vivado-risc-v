@@ -40,7 +40,7 @@ architecture behavioral of reset_control is
   signal blink_state : std_logic;
 
   -- Number of clock periods the reset signal is asserted
-  constant RST_CLK_PERIODS : natural := 10;
+  constant RST_CLK_PERIODS : natural := 50;
   -- Number of clock periods the reset signal is to be inhibited
   constant RST_CLK_INHIBIT : natural := 100 - RST_CLK_PERIODS;
 
