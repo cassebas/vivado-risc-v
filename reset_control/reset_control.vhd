@@ -39,10 +39,12 @@ architecture behavioral of reset_control is
 
   signal blink_state : std_logic;
 
+  signal reset_lock : std_logic;
+
   -- Number of clock periods the reset signal is asserted
-  constant RST_CLK_PERIODS : natural := 10;
+  constant RST_CLK_PERIODS : natural := 2;
   -- Number of clock periods the reset signal is to be inhibited
-  constant RST_CLK_INHIBIT : natural := 100 - RST_CLK_PERIODS;
+  constant RST_CLK_INHIBIT : natural := 5 - RST_CLK_PERIODS;
 
 begin
   led_cnt_proc: process(clk) is
@@ -87,27 +89,16 @@ begin
   end process statemachine_proc;
 
   reset_ctrl : process(clk) is
-    variable reset_periods : natural;
-    variable reset_inhibit : natural;
   begin
     if rising_edge(clk) then
-      if aresetn = '0' then
-        cpu_reset_n <= '1';
-        reset_periods := 0;
-        reset_inhibit := 0;
-      else
-        if reset_periods > 0 then
-          reset_periods := reset_periods - 1;
+      cpu_reset_n <= '1';
+      if cmd = CMD_RESET then
+        if reset_lock /= '1' then
           cpu_reset_n <= '0';
-        elsif reset_inhibit > 0 then
-          reset_inhibit := reset_inhibit - 1;
-          cpu_reset_n <= '1';
-        elsif cmd = CMD_RESET then
-          -- Reset request
-          reset_periods := RST_CLK_PERIODS-1;
-          reset_inhibit := RST_CLK_INHIBIT-1;
-          cpu_reset_n <= '0';
+          reset_lock <= '1';
         end if;
+      else
+        reset_lock <= '0';
       end if;
     end if;
   end process reset_ctrl;
