@@ -154,7 +154,7 @@ begin
 
 
   uart_0 : uart
-    port map (async_resetn  => logic_rst_n,
+    port map (async_resetn  => rst_n,
               clock         => clk,
               s_axi_awaddr  => axi_awaddr,
               s_axi_awvalid => axi_awvalid,
