@@ -138,26 +138,10 @@ set_property offset 0x60050000 [get_bd_addr_segs {RocketChip/IO_AXI4/SEG_boot_de
 set_property range 64K [get_bd_addr_segs {RocketChip/IO_AXI4/SEG_boot_device_0_reg0}]
 update_compile_order -fileset sources_1
 
-startgroup
-create_bd_cell -type ip -vlnv xilinx.com:ip:util_vector_logic:2.0 IO/util_vector_logic_0
-endgroup
-set_property -dict [list \
-  CONFIG.C_OPERATION {or} \
-  CONFIG.C_SIZE {1} \
-] [get_bd_cells IO/util_vector_logic_0]
-startgroup
-create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 IO/xlconstant_0
-endgroup
-delete_bd_objs [get_bd_nets IO/fan_en]
-connect_bd_net [get_bd_pins IO/XADC/user_temp_alarm_out] [get_bd_pins IO/util_vector_logic_0/Op1]
-connect_bd_net [get_bd_pins IO/util_vector_logic_0/Res] [get_bd_pins IO/fan_en]
-connect_bd_net [get_bd_pins IO/xlconstant_0/dout] [get_bd_pins IO/util_vector_logic_0/Op2]
-
 create_bd_port -dir O bbled1
 create_bd_port -dir O bbled2
 connect_bd_net [get_bd_ports bbled2] [get_bd_pins DDR/mem_ok]
 connect_bd_net [get_bd_ports bbled1] [get_bd_pins clk_wiz_0/locked]
-
 startgroup
 create_bd_cell -type ip -vlnv xilinx.com:ip:util_vector_logic:2.0 util_vector_logic_2
 endgroup
