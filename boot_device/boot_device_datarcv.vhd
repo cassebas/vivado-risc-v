@@ -84,14 +84,19 @@ architecture behavior of boot_device_datarcv is
   constant B1   : unsigned(1 downto 0) := "01";
   constant B2   : unsigned(1 downto 0) := "10";
   constant B3   : unsigned(1 downto 0) := "11";
-  constant BFST : unsigned(1 downto 0) := B0;
-  constant BLST : unsigned(1 downto 0) := B3;
+
+  constant TX_BFST : unsigned(1 downto 0) := B0;
+  constant TX_BLST : unsigned(1 downto 0) := B1;
+
+  constant RX_BFST : unsigned(1 downto 0) := B0;
+  constant RX_BLST : unsigned(1 downto 0) := B3;
 
   -- For counting the sent bytes we will need 2 bits, because a
-  -- maximum of 4 bytes will be sent.
+  -- maximum of 4 bytes will be sent. (Although currently configured
+  -- as only two bytes per command.)
   -- The bytes received are:
   --  B0  -> first byte
-  --  B3  -> last byte
+  --  B1  -> last byte
   signal tx_bytecnt_state, tx_bytecnt_state_nxt : unsigned(1 downto 0);
 
   -- For counting the received bytes we will need 2 bits, because a
@@ -102,10 +107,8 @@ architecture behavior of boot_device_datarcv is
   signal rx_bytecnt_state, rx_bytecnt_state_nxt : unsigned(1 downto 0);
 
   -- Some named constants for the fixed command to be sent
-  constant CMD_B0 : std_logic_vector(7 downto 0) := "00110101"; -- '5' (ASCII: 53)
+  constant CMD_B0 : std_logic_vector(7 downto 0) := "01011010"; -- 'Z' (ASCII: 90)
   constant CMD_B1 : std_logic_vector(7 downto 0) := "00101010"; -- '*' (ASCII: 42)
-  constant CMD_B2 : std_logic_vector(7 downto 0) := "00110100"; -- '4' (ASCII: 52)
-  constant CMD_B3 : std_logic_vector(7 downto 0) := "00110010"; -- '2' (ASCII: 50)
 
   --
   -- AXI Lite signals
@@ -151,8 +154,8 @@ begin
   begin
     if rising_edge(clk) then
       if logic_rst_n = '0' then
-        rx_bytecnt_state <= BFST;
-        tx_bytecnt_state <= BFST;
+        rx_bytecnt_state <= RX_BFST;
+        tx_bytecnt_state <= TX_BFST;
         axi_lite_r_state <= AXI_IDLE;
         axi_lite_w_state <= AXI_IDLE;
       else
@@ -171,8 +174,8 @@ begin
     rx_bytecnt_state_nxt <= rx_bytecnt_state;
 
     if axi_lite_r_state = AXI_READ_DATA_BUFFER and axi_rvalid = '1' then
-      if rx_bytecnt_state = BLST then
-        rx_bytecnt_state_nxt <= BFST;
+      if rx_bytecnt_state = RX_BLST then
+        rx_bytecnt_state_nxt <= RX_BFST;
       else
         rx_bytecnt_state_nxt <= rx_bytecnt_state + 1;
       end if;
@@ -186,8 +189,8 @@ begin
     tx_bytecnt_state_nxt <= tx_bytecnt_state;
 
     if axi_lite_w_state = AXI_WRITE_RESP and axi_bvalid = '1' then
-      if tx_bytecnt_state = BLST then
-        tx_bytecnt_state_nxt <= BFST;
+      if tx_bytecnt_state = TX_BLST then
+        tx_bytecnt_state_nxt <= TX_BFST;
       else
         tx_bytecnt_state_nxt <= tx_bytecnt_state + 1;
       end if;
@@ -226,7 +229,7 @@ begin
         end if;
       when AXI_READ_DATA_BUFFER =>
         if axi_rvalid = '1' then
-          if rx_bytecnt_state = BLST then
+          if rx_bytecnt_state = RX_BLST then
             -- Now reading last byte, next state back to AXI_IDLE
             axi_lite_r_state_nxt <= AXI_IDLE;
           else
@@ -272,7 +275,7 @@ begin
         end if;
       when AXI_WRITE_RESP =>
         if axi_bvalid = '1' then
-          if tx_bytecnt_state = BLST then
+          if tx_bytecnt_state = TX_BLST then
             axi_lite_w_state_nxt <= AXI_IDLE;
           else
             axi_lite_w_state_nxt <= AXI_READ_REQ_STATUS;
@@ -484,7 +487,7 @@ begin
         rcv_tmp_ready <= '0';
       else
         if axi_lite_r_state = AXI_READ_DATA_BUFFER and axi_rvalid = '1' then
-          if rx_bytecnt_state = BLST then
+          if rx_bytecnt_state = RX_BLST then
             -- Delay copying rcv_tmp to rcv_reg with 1 clock cycle
             rcv_tmp_ready <= '1';
           end if;
@@ -546,7 +549,7 @@ begin
       else
         if snd_data_active = '1' then
           if axi_lite_w_state = AXI_WRITE_RESP and axi_bvalid = '1' then
-            if tx_bytecnt_state = BLST then
+            if tx_bytecnt_state = TX_BLST then
               snd_data_active <= '0';
             end if;
           end if;
