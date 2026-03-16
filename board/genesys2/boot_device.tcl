@@ -33,12 +33,10 @@ launch_runs blk_mem_gen_0_synth_1 -jobs 6
 create_ip -name blk_mem_gen -vendor xilinx.com -library ip -version 8.4 -module_name blk_mem_gen_1
 set_property -dict [list \
   CONFIG.Byte_Size {8} \
-  CONFIG.Coe_File ${project_dir}/../../../boot_device/random.coe \
   CONFIG.Enable_A {Always_Enabled} \
-  CONFIG.Load_Init_File {true} \
   CONFIG.Read_Width_A {32} \
   CONFIG.Use_Byte_Write_Enable {true} \
-  CONFIG.Write_Depth_A {131072} \
+  CONFIG.Write_Depth_A {8192} \
   CONFIG.Write_Width_A {32} \
   CONFIG.use_bram_block {Stand_Alone} \
 ] [get_ips blk_mem_gen_1]
@@ -55,12 +53,10 @@ launch_runs blk_mem_gen_1_synth_1 -jobs 6
 create_ip -name blk_mem_gen -vendor xilinx.com -library ip -version 8.4 -module_name blk_mem_gen_2
 set_property -dict [list \
   CONFIG.Byte_Size {8} \
-  CONFIG.Coe_File ${project_dir}/../../../boot_device/pattern.coe \
   CONFIG.Enable_A {Always_Enabled} \
-  CONFIG.Load_Init_File {true} \
   CONFIG.Read_Width_A {32} \
   CONFIG.Use_Byte_Write_Enable {true} \
-  CONFIG.Write_Depth_A {131072} \
+  CONFIG.Write_Depth_A {8192} \
   CONFIG.Write_Width_A {32} \
   CONFIG.use_bram_block {Stand_Alone} \
 ] [get_ips blk_mem_gen_2]
