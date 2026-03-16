@@ -331,9 +331,7 @@ begin
         if axi_lite_w_state = AXI_WRITE_REQ_DATA then
           case tx_bytecnt_state is
             when B0     => ascii := CMD_B0;
-            when B1     => ascii := CMD_B1;
-            when B2     => ascii := CMD_B2;
-            when others => ascii := CMD_B3;
+            when others => ascii := CMD_B1;
           end case;
           axi_wdata(UART_DATA_WIDTH-1 downto 8) <= (others => '0');
           axi_wdata(7 downto 0) <= ascii;
