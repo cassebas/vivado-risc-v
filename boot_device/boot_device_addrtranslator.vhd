@@ -10,10 +10,10 @@ entity boot_device_addrtranslator is
 
            INPUT_IDX_LEN   : integer := 16;
            INPUT_IDX_LO    : integer := 16#5AF#;
-           INPUT_IDX_HI    : integer := 16#5B6#;
+           INPUT_IDX_HI    : integer := 16#5B8#;
 
            BRAM_SIZE       : integer := 1024;
-           ARRAY_SIZE      : integer := 8);
+           ARRAY_SIZE      : integer := 10);
 
   port (clk                  : in std_logic;
         rst_n                : in std_logic;

@@ -10,7 +10,7 @@ entity boot_device_datafiller is
            UART_ADDR_WIDTH : integer := 16;
            UART_DATA_WIDTH : integer := 32;
            BRAM_SIZE       : integer := 1024;
-           ARRAY_SIZE      : integer := 8);
+           ARRAY_SIZE      : integer := 10);
 
   port (clk         : in std_logic;
         rst_n       : in std_logic;

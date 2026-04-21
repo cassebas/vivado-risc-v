@@ -7,8 +7,8 @@ entity boot_device is
 
   generic (S_AXI_DATA_WIDTH : integer   := 32;
            S_AXI_ADDR_WIDTH : integer   := 16;
-           BRAM_SIZE        : integer   := 128;
-           ARRAY_SIZE       : integer   := 8);
+           BRAM_SIZE        : integer   := 160;
+           ARRAY_SIZE       : integer   := 10);
 
   port (cpu_reset_n     : in std_logic;  --  CPU reset, active low
 
