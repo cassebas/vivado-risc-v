@@ -17,7 +17,7 @@ FRESULT br_open (BlockRam *fp, const TCHAR *path, BYTE mode)
         return FR_INVALID_PARAMETER;
     }
 
-    fp->memptr = (uint32_t *)0x60050000;
+    fp->memptr = (uint32_t *)0x60080000;
     fp->byte_index = 0;
 
     return FR_OK;

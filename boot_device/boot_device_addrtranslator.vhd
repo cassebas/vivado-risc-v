@@ -5,15 +5,15 @@ use ieee.numeric_std.all;
 
 entity boot_device_addrtranslator is
   generic (BRAM_DATA_WIDTH : integer := 32;
-           BRAM_ADDR_WIDTH : integer := 14;
+           BRAM_ADDR_WIDTH : integer := 16;
            BRAM_WEA_WIDTH  : integer := 4;
 
-           INPUT_IDX_LEN   : integer := 16;
-           INPUT_IDX_LO    : integer := 16#5AF#;
-           INPUT_IDX_HI    : integer := 16#5B8#;
+           INPUT_IDX_LEN   : integer := 256;
+           INPUT_IDX_LO    : integer := 16#5CA4#;
+           INPUT_IDX_HI    : integer := 16#5DA3#;
 
-           BRAM_SIZE       : integer := 1024;
-           ARRAY_SIZE      : integer := 10);
+           BRAM_SIZE       : integer := 4096;
+           ARRAY_SIZE      : integer := 256);
 
   port (clk                  : in std_logic;
         rst_n                : in std_logic;

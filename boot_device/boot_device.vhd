@@ -6,9 +6,9 @@ use ieee.numeric_std.all;
 entity boot_device is
 
   generic (S_AXI_DATA_WIDTH : integer   := 32;
-           S_AXI_ADDR_WIDTH : integer   := 16;
-           BRAM_SIZE        : integer   := 160;
-           ARRAY_SIZE       : integer   := 10);
+           S_AXI_ADDR_WIDTH : integer   := 18;
+           BRAM_SIZE        : integer   := 4096;
+           ARRAY_SIZE       : integer   := 256);
 
   port (cpu_reset_n     : in std_logic;  --  CPU reset, active low
 
@@ -95,7 +95,7 @@ architecture behavior of boot_device is
   -- ADDR_LSB is used for addressing 32/64 bit registers/memories
   -- ADDR_LSB = 2 for 32 bits (n downto 2)
   -- ADDR_LSB = 3 for 64 bits (n downto 3)
-  constant ADDR_LSB  : integer := (S_AXI_DATA_WIDTH/32)+ 1;
+  constant ADDR_LSB  : integer := 2;
 
   constant BRAM_DATA_WIDTH : integer := S_AXI_DATA_WIDTH;
   constant BRAM_ADDR_WIDTH : integer := S_AXI_ADDR_WIDTH - ADDR_LSB;
@@ -135,8 +135,11 @@ architecture behavior of boot_device is
   end component boot_device_axislave;
 
   component boot_device_addrtranslator is
-    generic (BRAM_SIZE  : integer;
-             ARRAY_SIZE : integer);
+    generic (BRAM_DATA_WIDTH : integer;
+             BRAM_ADDR_WIDTH : integer;
+             BRAM_WEA_WIDTH  : integer;
+             BRAM_SIZE       : integer;
+             ARRAY_SIZE      : integer);
 
     port (clk                  : in std_logic;
           rst_n                : in std_logic;
@@ -155,8 +158,11 @@ architecture behavior of boot_device is
   end component;
 
   component boot_device_datafiller is
-    generic (BRAM_SIZE  : integer;
-             ARRAY_SIZE : integer);
+    generic (BRAM_DATA_WIDTH : integer;
+             BRAM_ADDR_WIDTH : integer;
+             BRAM_WEA_WIDTH  : integer;
+             BRAM_SIZE       : integer;
+             ARRAY_SIZE      : integer);
 
     port (clk             : in std_logic;
           rst_n           : in std_logic;
@@ -279,8 +285,11 @@ begin
 
 
   boot_dev_addrtranslator_0 : boot_device_addrtranslator
-    generic map (BRAM_SIZE  => BRAM_SIZE,
-                 ARRAY_SIZE => ARRAY_SIZE)
+    generic map (BRAM_DATA_WIDTH => BRAM_DATA_WIDTH,
+                 BRAM_ADDR_WIDTH => BRAM_ADDR_WIDTH,
+                 BRAM_WEA_WIDTH  => BRAM_WEA_WIDTH,
+                 BRAM_SIZE       => BRAM_SIZE,
+                 ARRAY_SIZE      => ARRAY_SIZE)
 
     port map (clk                  => S00_AXI_aclk,
               rst_n                => S00_AXI_aresetn,
@@ -299,8 +308,11 @@ begin
 
 
   boot_device_datafiller_0 : boot_device_datafiller
-    generic map (BRAM_SIZE  => BRAM_SIZE,
-                 ARRAY_SIZE => ARRAY_SIZE)
+    generic map (BRAM_DATA_WIDTH => BRAM_DATA_WIDTH,
+                 BRAM_ADDR_WIDTH => BRAM_ADDR_WIDTH,
+                 BRAM_WEA_WIDTH  => BRAM_WEA_WIDTH,
+                 BRAM_SIZE       => BRAM_SIZE,
+                 ARRAY_SIZE      => ARRAY_SIZE)
 
     port map (
         clk         => S00_AXI_aclk,

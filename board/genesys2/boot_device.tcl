@@ -10,13 +10,13 @@ puts "boot_device.tcl: project directory is ${project_dir}"
 create_ip -name blk_mem_gen -vendor xilinx.com -library ip -version 8.4 -module_name blk_mem_gen_0
 set_property -dict [list \
   CONFIG.Byte_Size {8} \
-  CONFIG.Coe_File ${project_dir}/../../../boot_device/bsort.coe \
+  CONFIG.Coe_File ${project_dir}/../../../boot_device/bitmnp01.coe \
   CONFIG.Enable_A {Always_Enabled} \
   CONFIG.Fill_Remaining_Memory_Locations {true} \
   CONFIG.Load_Init_File {true} \
   CONFIG.Operating_Mode_A {READ_FIRST} \
   CONFIG.Use_Byte_Write_Enable {true} \
-  CONFIG.Write_Depth_A {16384} \
+  CONFIG.Write_Depth_A {65536} \
   CONFIG.Write_Width_A {32} \
   CONFIG.use_bram_block {Stand_Alone} \
 ] [get_ips blk_mem_gen_0]
@@ -36,7 +36,7 @@ set_property -dict [list \
   CONFIG.Enable_A {Always_Enabled} \
   CONFIG.Read_Width_A {32} \
   CONFIG.Use_Byte_Write_Enable {true} \
-  CONFIG.Write_Depth_A {8192} \
+  CONFIG.Write_Depth_A {65536} \
   CONFIG.Write_Width_A {32} \
   CONFIG.use_bram_block {Stand_Alone} \
 ] [get_ips blk_mem_gen_1]
@@ -56,7 +56,7 @@ set_property -dict [list \
   CONFIG.Enable_A {Always_Enabled} \
   CONFIG.Read_Width_A {32} \
   CONFIG.Use_Byte_Write_Enable {true} \
-  CONFIG.Write_Depth_A {8192} \
+  CONFIG.Write_Depth_A {65536} \
   CONFIG.Write_Width_A {32} \
   CONFIG.use_bram_block {Stand_Alone} \
 ] [get_ips blk_mem_gen_2]
@@ -130,8 +130,8 @@ create_bd_port -dir O -from 7 -to 0 led_out
 connect_bd_net [get_bd_ports led_out] [get_bd_pins IO/led_out]
 
 assign_bd_address [get_bd_addr_segs {IO/boot_device_0/S00_AXI/reg0}]
-set_property offset 0x60050000 [get_bd_addr_segs {RocketChip/IO_AXI4/SEG_boot_device_0_reg0}]
-set_property range 64K [get_bd_addr_segs {RocketChip/IO_AXI4/SEG_boot_device_0_reg0}]
+set_property offset 0x60080000 [get_bd_addr_segs {RocketChip/IO_AXI4/SEG_boot_device_0_reg0}]
+set_property range 256K [get_bd_addr_segs {RocketChip/IO_AXI4/SEG_boot_device_0_reg0}]
 update_compile_order -fileset sources_1
 
 create_bd_port -dir O bbled1

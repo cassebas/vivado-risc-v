@@ -13,7 +13,7 @@ entity boot_device_axislave is
 		-- Width of AXI data bus
 		BD_AXISLAVE_DATA_WIDTH : integer := 32;
 		-- Width of AXI address bus
-		BD_AXISLAVE_ADDR_WIDTH : integer := 14;
+		BD_AXISLAVE_ADDR_WIDTH : integer := 16;
 		BD_AXISLAVE_WEA_WIDTH  : integer := 4
 	);
 	port (

@@ -4,11 +4,11 @@ use ieee.numeric_std.all;
 
 entity boot_device_datarcv is
   generic (BRAM_WEA_WIDTH  : integer := 4;
-           BRAM_ADDR_WIDTH : integer := 14;
+           BRAM_ADDR_WIDTH : integer := 16;
            BRAM_DATA_WIDTH : integer := 32;
            UART_ADDR_WIDTH : integer := 16;
            UART_DATA_WIDTH : integer := 32;
-           BRAM_SIZE       : integer := 2**10);
+           BRAM_SIZE       : integer := 4096);
 
   port (clk           : in std_logic;
         rst_n         : in std_logic;
