@@ -33,6 +33,8 @@ FRESULT br_lseek (BlockRam *fp, FSIZE_t ofs);
 /* Mount/Unmount a logical drive */
 FRESULT br_mount (FATFS *fs, const TCHAR *path, BYTE opt);
 
+void set_blockram_address(uint32_t *addr);
+
 #define br_tell(fp) ((fp)->byte_index)
 
 #endif /* BLOCK_RAM_H */

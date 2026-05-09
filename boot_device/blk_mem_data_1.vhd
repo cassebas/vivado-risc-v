@@ -2,16 +2,16 @@ library ieee;
 use ieee.std_logic_1164.all;
 
 
-entity blk_mem_gen_0 is
+entity blk_mem_data_1 is
   port (clka : in STD_LOGIC;
         wea : in STD_LOGIC_VECTOR ( 3 downto 0 );
         addra : in STD_LOGIC_VECTOR ( 15 downto 0 );
         dina : in STD_LOGIC_VECTOR ( 31 downto 0 );
         douta : out STD_LOGIC_VECTOR ( 31 downto 0 ));
-end blk_mem_gen_0;
+end blk_mem_data_1;
 
 
-architecture stub of blk_mem_gen_0 is
+architecture stub of blk_mem_data_1 is
 
   attribute syn_black_box : boolean;
   attribute black_box_pad_pin : string;

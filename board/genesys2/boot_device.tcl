@@ -7,83 +7,126 @@ update_compile_order -fileset sources_1
 set project_dir [get_property DIRECTORY [current_project]]
 puts "boot_device.tcl: project directory is ${project_dir}"
 
-create_ip -name blk_mem_gen -vendor xilinx.com -library ip -version 8.4 -module_name blk_mem_gen_0
+create_ip -name blk_mem_gen -vendor xilinx.com -library ip -version 8.4 -module_name blk_mem_app_0
 set_property -dict [list \
-  CONFIG.Byte_Size {8} \
-  CONFIG.Coe_File ${project_dir}/../../../boot_device/bitmnp01.coe \
   CONFIG.Enable_A {Always_Enabled} \
-  CONFIG.Fill_Remaining_Memory_Locations {true} \
-  CONFIG.Load_Init_File {true} \
+  CONFIG.Byte_Size {8} \
   CONFIG.Operating_Mode_A {READ_FIRST} \
+  CONFIG.Read_Width_A {32} \
   CONFIG.Use_Byte_Write_Enable {true} \
-  CONFIG.Write_Depth_A {65536} \
+  CONFIG.Write_Depth_A {16384} \
   CONFIG.Write_Width_A {32} \
   CONFIG.use_bram_block {Stand_Alone} \
-] [get_ips blk_mem_gen_0]
-generate_target {instantiation_template} [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_0/blk_mem_gen_0.xci]
-generate_target all [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_0/blk_mem_gen_0.xci]
-catch { config_ip_cache -export [get_ips -all blk_mem_gen_0] }
+  CONFIG.Load_Init_File {true} \
+  CONFIG.Coe_File ${project_dir}/../../../boot_device/bootstrap.coe \
+  CONFIG.Fill_Remaining_Memory_Locations {true} \
+] [get_ips blk_mem_app_0]
+generate_target {instantiation_template} [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_app_0/blk_mem_app_0.xci]
+generate_target all [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_app_0/blk_mem_app_0.xci]
+catch { config_ip_cache -export [get_ips -all blk_mem_app_0] }
 
-export_ip_user_files -of_objects [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_0/blk_mem_gen_0.xci] -no_script -sync -force -quiet
-create_ip_run [get_files -of_objects [get_fileset sources_1] workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_0/blk_mem_gen_0.xci]
+export_ip_user_files -of_objects [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_app_0/blk_mem_app_0.xci] -no_script -sync -force -quiet
+create_ip_run [get_files -of_objects [get_fileset sources_1] workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_app_0/blk_mem_app_0.xci]
 
-launch_runs blk_mem_gen_0_synth_1 -jobs 6
+launch_runs blk_mem_app_0_synth_1 -jobs 6
 
 
-create_ip -name blk_mem_gen -vendor xilinx.com -library ip -version 8.4 -module_name blk_mem_gen_1
+create_ip -name blk_mem_gen -vendor xilinx.com -library ip -version 8.4 -module_name blk_mem_app_1
 set_property -dict [list \
-  CONFIG.Byte_Size {8} \
   CONFIG.Enable_A {Always_Enabled} \
+  CONFIG.Byte_Size {8} \
+  CONFIG.Operating_Mode_A {READ_FIRST} \
   CONFIG.Read_Width_A {32} \
   CONFIG.Use_Byte_Write_Enable {true} \
   CONFIG.Write_Depth_A {65536} \
   CONFIG.Write_Width_A {32} \
   CONFIG.use_bram_block {Stand_Alone} \
-] [get_ips blk_mem_gen_1]
+  CONFIG.Load_Init_File {true} \
+  CONFIG.Coe_File ${project_dir}/../../../boot_device/bitmnp01.coe \
+  CONFIG.Fill_Remaining_Memory_Locations {true} \
+] [get_ips blk_mem_app_1]
+generate_target {instantiation_template} [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_app_1/blk_mem_app_1.xci]
+generate_target all [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_app_1/blk_mem_app_1.xci]
+catch { config_ip_cache -export [get_ips -all blk_mem_app_1] }
 
-generate_target {instantiation_template} [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_1/blk_mem_gen_1.xci]
+export_ip_user_files -of_objects [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_app_1/blk_mem_app_1.xci] -no_script -sync -force -quiet
+create_ip_run [get_files -of_objects [get_fileset sources_1] workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_app_1/blk_mem_app_1.xci]
 
-generate_target all [get_files  workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_1/blk_mem_gen_1.xci]
-catch { config_ip_cache -export [get_ips -all blk_mem_gen_1] }
-export_ip_user_files -of_objects [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_1/blk_mem_gen_1.xci] -no_script -sync -force -quiet
-create_ip_run [get_files -of_objects [get_fileset sources_1] workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_1/blk_mem_gen_1.xci]
+launch_runs blk_mem_app_1_synth_1 -jobs 6
 
-launch_runs blk_mem_gen_1_synth_1 -jobs 6
 
-create_ip -name blk_mem_gen -vendor xilinx.com -library ip -version 8.4 -module_name blk_mem_gen_2
+create_ip -name blk_mem_gen -vendor xilinx.com -library ip -version 8.4 -module_name blk_mem_data_0
 set_property -dict [list \
-  CONFIG.Byte_Size {8} \
   CONFIG.Enable_A {Always_Enabled} \
+  CONFIG.Byte_Size {8} \
+  CONFIG.Operating_Mode_A {READ_FIRST} \
   CONFIG.Read_Width_A {32} \
   CONFIG.Use_Byte_Write_Enable {true} \
-  CONFIG.Write_Depth_A {65536} \
+  CONFIG.Write_Depth_A {4096} \
   CONFIG.Write_Width_A {32} \
   CONFIG.use_bram_block {Stand_Alone} \
-] [get_ips blk_mem_gen_2]
+] [get_ips blk_mem_data_0]
 
-generate_target {instantiation_template} [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_2/blk_mem_gen_2.xci]
+generate_target {instantiation_template} [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_data_0/blk_mem_data_0.xci]
 
-generate_target all [get_files  workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_2/blk_mem_gen_2.xci]
-catch { config_ip_cache -export [get_ips -all blk_mem_gen_2] }
-export_ip_user_files -of_objects [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_2/blk_mem_gen_2.xci] -no_script -sync -force -quiet
-create_ip_run [get_files -of_objects [get_fileset sources_1] workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_gen_2/blk_mem_gen_2.xci]
+generate_target all [get_files  workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_data_0/blk_mem_data_0.xci]
+catch { config_ip_cache -export [get_ips -all blk_mem_data_0] }
+export_ip_user_files -of_objects [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_data_0/blk_mem_data_0.xci] -no_script -sync -force -quiet
+create_ip_run [get_files -of_objects [get_fileset sources_1] workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_data_0/blk_mem_data_0.xci]
 
-launch_runs blk_mem_gen_2_synth_1 -jobs 6
+launch_runs blk_mem_data_0_synth_1 -jobs 6
 
 
-add_files -norecurse {boot_device/boot_device.vhd boot_device/boot_device_axislave.vhd boot_device/boot_device_addrtranslator.vhd boot_device/boot_device_datafiller.vhd boot_device/boot_device_datarcv.vhd boot_device/blk_mem_gen_0.vhd boot_device/blk_mem_gen_1.vhd boot_device/blk_mem_gen_2.vhd}
+create_ip -name blk_mem_gen -vendor xilinx.com -library ip -version 8.4 -module_name blk_mem_data_1
+set_property -dict [list \
+  CONFIG.Enable_A {Always_Enabled} \
+  CONFIG.Byte_Size {8} \
+  CONFIG.Operating_Mode_A {READ_FIRST} \
+  CONFIG.Read_Width_A {32} \
+  CONFIG.Use_Byte_Write_Enable {true} \
+  CONFIG.Write_Depth_A {4096} \
+  CONFIG.Write_Width_A {32} \
+  CONFIG.use_bram_block {Stand_Alone} \
+] [get_ips blk_mem_data_1]
+
+generate_target {instantiation_template} [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_data_1/blk_mem_data_1.xci]
+
+generate_target all [get_files  workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_data_1/blk_mem_data_1.xci]
+catch { config_ip_cache -export [get_ips -all blk_mem_data_1] }
+export_ip_user_files -of_objects [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_data_1/blk_mem_data_1.xci] -no_script -sync -force -quiet
+create_ip_run [get_files -of_objects [get_fileset sources_1] workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_data_1/blk_mem_data_1.xci]
+
+launch_runs blk_mem_data_1_synth_1 -jobs 6
+
+
+add_files -norecurse { \
+                           boot_device/boot_device.vhd \
+                           boot_device/boot_device_axislave.vhd \
+                           boot_device/boot_device_addrtranslator.vhd \
+                           boot_device/boot_device_datafiller.vhd \
+                           boot_device/boot_device_datarcv.vhd \
+                           boot_device/blk_mem_app_0.vhd \
+                           boot_device/blk_mem_app_1.vhd \
+                           boot_device/blk_mem_data_0.vhd \
+                           boot_device/blk_mem_data_1.vhd }
+
 add_files -fileset constrs_1 -norecurse board/genesys2/uart_extra.xdc
 add_files -fileset constrs_1 -norecurse board/genesys2/leds.xdc
+
 update_compile_order -fileset sources_1
+
 
 open_bd_design ${project_dir}/genesys2-riscv.srcs/sources_1/bd/riscv/riscv.bd
 create_bd_cell -type module -reference boot_device IO/boot_device_0
 startgroup
-set_property CONFIG.NUM_MI {6} [get_bd_cells IO/io_axi_s]
+set_property CONFIG.NUM_MI {7} [get_bd_cells IO/io_axi_s]
 endgroup
 connect_bd_intf_net [get_bd_intf_pins IO/io_axi_s/M05_AXI] -boundary_type upper [get_bd_intf_pins IO/boot_device_0/S00_AXI]
+connect_bd_intf_net [get_bd_intf_pins IO/io_axi_s/M06_AXI] -boundary_type upper [get_bd_intf_pins IO/boot_device_0/S01_AXI]
 connect_bd_net [get_bd_pins IO/axi_clock] [get_bd_pins IO/boot_device_0/S00_AXI_aclk]
 connect_bd_net [get_bd_pins IO/axi_reset] [get_bd_pins IO/boot_device_0/S00_AXI_aresetn]
+connect_bd_net [get_bd_pins IO/axi_clock] [get_bd_pins IO/boot_device_0/S01_AXI_aclk]
+connect_bd_net [get_bd_pins IO/axi_reset] [get_bd_pins IO/boot_device_0/S01_AXI_aresetn]
 connect_bd_net [get_bd_pins IO/reset_control_v1_0_0/cpu_reset_n] [get_bd_pins IO/boot_device_0/cpu_reset_n]
 
 startgroup
@@ -129,9 +172,20 @@ endgroup
 create_bd_port -dir O -from 7 -to 0 led_out
 connect_bd_net [get_bd_ports led_out] [get_bd_pins IO/led_out]
 
-assign_bd_address [get_bd_addr_segs {IO/boot_device_0/S00_AXI/reg0}]
-set_property offset 0x60080000 [get_bd_addr_segs {RocketChip/IO_AXI4/SEG_boot_device_0_reg0}]
-set_property range 256K [get_bd_addr_segs {RocketChip/IO_AXI4/SEG_boot_device_0_reg0}]
+assign_bd_address \
+    -offset 0x60050000 \
+    -range  0x00010000 \
+    -target_address_space \
+        [get_bd_addr_spaces RocketChip/IO_AXI4] \
+        [get_bd_addr_segs IO/boot_device_0/S00_AXI/reg0] -force
+
+assign_bd_address \
+    -offset 0x60080000 \
+    -range  0x00040000 \
+    -target_address_space \
+        [get_bd_addr_spaces RocketChip/IO_AXI4] \
+        [get_bd_addr_segs IO/boot_device_0/S01_AXI/reg0] -force
+
 update_compile_order -fileset sources_1
 
 create_bd_port -dir O bbled1

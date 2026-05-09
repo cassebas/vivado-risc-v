@@ -9,6 +9,11 @@
 
 #include "blockram.h"
 
+#define BOOTDEV_BOOTSTRAP_ADDR    0x60050000  // Addres of the mmio boot device
+#define BOOTDEV_BOOTNUM_OFFSET    0x00003f00  // Offset to the bootnum parameter
+#define BOOTDEV_APPLICATION_ADDR  0x60080000  // Addres of the mmio boot device
+
+
 /* Card type flags (card_type) */
 #define CT_MMC          0x01            /* MMC ver 3 */
 #define CT_SD1          0x02            /* SD ver 1 */
@@ -602,6 +607,20 @@ static int download(void) {
 int main(void) {
     uint64_t * bss = (uint64_t *)_fbss;
     while (bss < (uint64_t *)_ebss) *bss++ = 0;
+
+    uint32_t *bootmem_bootstrap = (uint32_t *) BOOTDEV_BOOTSTRAP_ADDR;
+    volatile uint32_t boot_num = bootmem_bootstrap[BOOTDEV_BOOTNUM_OFFSET]++;
+    uint32_t *bootmem_application = (uint32_t *) BOOTDEV_APPLICATION_ADDR;
+
+    if (!boot_num) {
+      // First time boot!
+      kprintf("FIRST BOOT, running application ");
+      set_blockram_address(bootmem_bootstrap);
+    } else {
+      kprintf("NOT FIRST BOOT, running boostrap ");
+      set_blockram_address(bootmem_application);
+    }
+    kprintf("bootnum=%d\n", boot_num);
 
     for (;;) {
         drv_status = STA_NOINIT;

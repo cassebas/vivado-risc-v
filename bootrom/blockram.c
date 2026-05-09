@@ -10,6 +10,8 @@
 #include "blockram.h"
 #include <stddef.h>
 
+static uint32_t *blockram_addr;
+
 /* Open or create a file */
 FRESULT br_open (BlockRam *fp, const TCHAR *path, BYTE mode)
 {
@@ -17,7 +19,7 @@ FRESULT br_open (BlockRam *fp, const TCHAR *path, BYTE mode)
         return FR_INVALID_PARAMETER;
     }
 
-    fp->memptr = (uint32_t *)0x60080000;
+    fp->memptr = blockram_addr;
     fp->byte_index = 0;
 
     return FR_OK;
@@ -97,4 +99,9 @@ FRESULT br_lseek (BlockRam *fp, FSIZE_t ofs)
 FRESULT br_mount (FATFS *fs, const TCHAR *path, BYTE opt)
 {
     return FR_OK;
+}
+
+void set_blockram_address(uint32_t *addr)
+{
+    blockram_addr = addr;
 }
