@@ -41,9 +41,6 @@ set_property -dict [list \
   CONFIG.Write_Depth_A {65536} \
   CONFIG.Write_Width_A {32} \
   CONFIG.use_bram_block {Stand_Alone} \
-  CONFIG.Load_Init_File {true} \
-  CONFIG.Coe_File ${project_dir}/../../../boot_device/bitmnp01.coe \
-  CONFIG.Fill_Remaining_Memory_Locations {true} \
 ] [get_ips blk_mem_app_1]
 generate_target {instantiation_template} [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_app_1/blk_mem_app_1.xci]
 generate_target all [get_files workspace/${core_config}/vivado-genesys2-riscv/genesys2-riscv.srcs/sources_1/ip/blk_mem_app_1/blk_mem_app_1.xci]
