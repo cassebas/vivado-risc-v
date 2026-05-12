@@ -17,6 +17,11 @@ int main(void)
     buffer[i] = 0;
   }
 
+  // Clear any left over bytes that are sent to us too soon
+  while (kdata_ready()) {
+    kgetc();
+  }
+
   volatile uint32_t *reset_ctrl_reg = (uint32_t *) RESET_CTRL_BASE;
   *reset_ctrl_reg = 0;
 
@@ -24,13 +29,14 @@ int main(void)
   kputc(ASCII_ENQ);
 
   // Configuration bytes
-  // The write function on the host will send the most significat byte first,
+  // The write function on the host will send the most significant byte first,
   // since it runs a little endian system.
   for (int i = 0; i < BOOTSTRAP_CONF_BYTECNT; i++) {
     buffer[i] = (uint8_t) kgetc();
   }
   volatile uint32_t *bootstrap_cfg_mmio = (uint32_t *) BOOTSTRAP_CONF_ADDR;
 
+  kprintf("BOOTSTRAP: writing configuration to MMIO.\n");
   // Write the received bytes to the MMIO memory
   uint32_t *word_buffer = (uint32_t *) buffer;
   for (int i = 0; i < BOOTSTRAP_CONF_PARAMCNT; i++) {

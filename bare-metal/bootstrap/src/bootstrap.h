@@ -16,7 +16,8 @@
 
 // Bootstrap configuration bytes received from the host: each configuration
 // parameter contains an unsigned integer of 4 bytes.
-#define BOOTSTRAP_CONF_ADDR     (BOOTSTRAP_BASE + 0x3f00)
+#define BOOTSTRAP_CONF_OFFSET   0x0000fc00
+#define BOOTSTRAP_CONF_ADDR     (BOOTSTRAP_BASE + BOOTSTRAP_CONF_OFFSET)
 #define BOOTSTRAP_CONF_BYTECNT  24
 #define BOOTSTRAP_CONF_PARAMCNT 6
 // Indices of the configuration parameters, using integer pointer arithmetic

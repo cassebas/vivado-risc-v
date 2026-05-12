@@ -16,6 +16,16 @@ struct uart_regs {
     volatile uint32_t control;
 };
 
+bool kdata_ready(void)
+{
+    struct uart_regs *regs = (struct uart_regs *)0x60010000;
+    if (regs->status & SR_RX_FIFO_VALID_DATA) {
+      return true;
+    } else {
+      return false;
+    }
+}
+
 char kgetc(void)
 {
     char c;
