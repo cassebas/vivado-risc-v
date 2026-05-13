@@ -34,6 +34,10 @@ char kgetc(void)
         ;
 
     c = (char) (regs->rx_fifo & 0xff);
+
+    // Set fifo buffer to not full
+    regs->status &= ~(SR_RX_FIFO_FULL);
+
     return c;
 }
 
