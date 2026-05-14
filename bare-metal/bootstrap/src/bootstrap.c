@@ -11,7 +11,6 @@
 int main(void)
 {
   uint8_t buffer[MAX_BUF];
-  uint8_t buffer2[MAX_BUF];
   uint32_t word_buffer[MAX_BUF/4];
 
   // Clear buffer
@@ -69,22 +68,7 @@ int main(void)
   while (total < nbytes) {
     if (kdata_ready()) {
       c = kgetc();
-      buffer[cnt] = (uint8_t) c;
-      if (loop == 0) {
-        buffer2[cnt] = (uint8_t) c;
-      }
-
-      cnt++;
-      if (cnt % 4 == 0) {
-        // Hack: swap because of problem with endianness...
-        uint8_t tmp;
-        tmp = buffer[cnt - 4];
-        buffer[cnt - 4] = buffer[cnt - 1];
-        buffer[cnt - 1] = tmp;
-        tmp = buffer[cnt - 3];
-        buffer[cnt - 3] = buffer[cnt - 2];
-        buffer[cnt - 2] = tmp;
-      }
+      buffer[cnt++] = (uint8_t) c;
       total++;
     }
 
@@ -110,17 +94,6 @@ int main(void)
 
   kprintf("BOOTSTRAP: received %d bytes for the ELF binary, ", total);
   kprintf("which have been written to the BlockRAM.\n");
-  for (int i = 0; i < 64; i += 4) {
-    print_hex(buffer2[i], 2);
-    kprintf(" ");
-    print_hex(buffer2[i+1], 2);
-    kprintf(" ");
-    print_hex(buffer2[i+2], 2);
-    kprintf(" ");
-    print_hex(buffer2[i+3], 2);
-    kprintf("\n");
-  }
-
   for (int i = 0; i < 64; i += 4) {
     print_hex(application_elf_mmio[i], 8);
     kprintf(" ");
