@@ -50,13 +50,16 @@ int main(int argc, char *argv[])
     uint8_t cnt = 0;
     int bytes_read = 0;
     while ((c = fgetc(ifp)) != EOF) {
-        if (cnt == BYTES_PER_LINE) {
-            cnt = 0;
-            fprintf(ofp, ",\n");
-        }
-        bytes_read++;
         line[cnt++] = c;
-        fprintf(ofp, "%02x", c);
+        bytes_read++;
+        if (cnt == BYTES_PER_LINE) {
+          // Print the words in little endian order
+          for (int i = BYTES_PER_LINE - 1; i >= 0; i--) {
+            fprintf(ofp, "%02x", line[i]);
+          }
+          fprintf(ofp, ",\n");
+          cnt = 0;
+        }
     }
 
     // Maybe pad last line with zeroes?
