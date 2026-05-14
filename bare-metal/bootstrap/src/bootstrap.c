@@ -60,7 +60,7 @@ int main(void)
   // Send another ENQuiry character to request the bytes from the ELF file
   kputc(ASCII_ENQ);
 
-  size_t nbytes = bootstrap_cfg_mmio[APPLICATION_ELF_SIZE];
+  const size_t nbytes = bootstrap_cfg_mmio[APPLICATION_ELF_SIZE];
   kprintf("BOOTSTRAP: receiving %d bytes of the ELF binary.\n", nbytes);
   volatile uint32_t *application_elf_mmio = (uint32_t *) APPLICATION_BASE;
   int total = 0, loop = 0, start, end;
@@ -73,36 +73,50 @@ int main(void)
     }
 
     if (cnt == MAX_BUF) {
-      loop++;
-      start = (loop - 1) * MAX_BUF / 4;
-      end = start + MAX_BUF / 4;
       // Reached buffer's capacity, write the data to the block ram
       memcpy(word_buffer, buffer, MAX_BUF);
-      for (int i = start; i < end; i++) {
-        application_elf_mmio[i] = word_buffer[i];
+      start = loop * MAX_BUF / 4;
+      for (int i = 0; i < MAX_BUF/4; i++) {
+        application_elf_mmio[start + i] = word_buffer[i];
       }
+      loop++;
       cnt = 0;
     }
   }
   // We have received all characters, copy the rest to MMIO
   memcpy(word_buffer, buffer, cnt);
-  start = (loop - 1) * MAX_BUF / 4;
-  end = start + cnt / 4;
-  for (int i = start; i < end; i++) {
-    application_elf_mmio[i] = word_buffer[i];
+  start = loop * MAX_BUF / 4;
+  for (int i = 0; i < cnt; i++) {
+    application_elf_mmio[i+start] = word_buffer[i];
   }
 
   kprintf("BOOTSTRAP: received %d bytes for the ELF binary, ", total);
   kprintf("which have been written to the BlockRAM.\n");
-  for (int i = 0; i < 64; i += 4) {
-    print_hex(application_elf_mmio[i], 8);
-    kprintf(" ");
-    print_hex(application_elf_mmio[i+1], 8);
-    kprintf(" ");
-    print_hex(application_elf_mmio[i+2], 8);
-    kprintf(" ");
-    print_hex(application_elf_mmio[i+3], 8);
-    kprintf("\n");
+  if (DEBUG) {
+    end = start + cnt / 4;
+    kprintf("BOOTSTRAP: loop = %d, start = %d.\n", loop, start);
+    for (int i = 0; i < 32; i += 4) {
+      print_hex(application_elf_mmio[i], 8);
+      kprintf(" ");
+      print_hex(application_elf_mmio[i+1], 8);
+      kprintf(" ");
+      print_hex(application_elf_mmio[i+2], 8);
+      kprintf(" ");
+      print_hex(application_elf_mmio[i+3], 8);
+      kprintf("\n");
+    }
+    kprintf("------------------------------\n");
+    for (int i = start-32; i < end; i += 4) {
+      print_hex(application_elf_mmio[i], 8);
+      kprintf(" ");
+      print_hex(application_elf_mmio[i+1], 8);
+      kprintf(" ");
+      print_hex(application_elf_mmio[i+2], 8);
+      kprintf(" ");
+      print_hex(application_elf_mmio[i+3], 8);
+      kprintf("\n");
+    }
+
   }
 
   kprintf("BOOTSTRAP: performing reset.\n");

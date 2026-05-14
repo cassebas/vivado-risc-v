@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#define DEBUG 0
+
 #define MAX_BUF 256
 
 // The reset control register allows us to signal a CPU reset
