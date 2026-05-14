@@ -1,6 +1,4 @@
-#include <stdio.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
 
@@ -13,8 +11,12 @@
 int main(void)
 {
   uint8_t buffer[MAX_BUF];
+  uint8_t buffer2[MAX_BUF];
+  uint32_t word_buffer[MAX_BUF/4];
+
   // Clear buffer
-  memset(&buffer, 0, sizeof(buffer));
+  memset(buffer, 0, sizeof(buffer));
+  memset(word_buffer, 0, sizeof(word_buffer));
 
   volatile uint32_t *reset_ctrl_reg = (uint32_t *) RESET_CTRL_BASE;
   *reset_ctrl_reg = 0;
@@ -33,11 +35,11 @@ int main(void)
       buffer[cnt++] = (uint8_t) c;
     }
   }
-  volatile uint32_t *bootstrap_cfg_mmio = (uint32_t *) BOOTSTRAP_CONF_ADDR;
 
   // Write the received bytes to the MMIO memory
-  uint32_t *word_buffer = (uint32_t *) buffer;
-  for (int i = 0; i < BOOTSTRAP_CONF_PARAMCNT; i++) {
+  volatile uint32_t *bootstrap_cfg_mmio = (uint32_t *) BOOTSTRAP_CONF_ADDR;
+  memcpy(word_buffer, buffer, BOOTSTRAP_CONF_BYTECNT);
+  for (int i=0; i<BOOTSTRAP_CONF_PARAMCNT; i++) {
     bootstrap_cfg_mmio[i] = word_buffer[i];
   }
 
@@ -59,38 +61,83 @@ int main(void)
   // Send another ENQuiry character to request the bytes from the ELF file
   kputc(ASCII_ENQ);
 
+  size_t nbytes = bootstrap_cfg_mmio[APPLICATION_ELF_SIZE];
+  kprintf("BOOTSTRAP: receiving %d bytes of the ELF binary.\n", nbytes);
   volatile uint32_t *application_elf_mmio = (uint32_t *) APPLICATION_BASE;
-  int total = 0;
+  int total = 0, loop = 0, start, end;
   cnt = 0;
-  while (total < bootstrap_cfg_mmio[APPLICATION_ELF_SIZE]) {
+  while (total < nbytes) {
     if (kdata_ready()) {
       c = kgetc();
-      buffer[cnt++] = (uint8_t) c;
+      buffer[cnt] = (uint8_t) c;
+      if (loop == 0) {
+        buffer2[cnt] = (uint8_t) c;
+      }
+
+      cnt++;
+      if (cnt % 4 == 0) {
+        // Hack: swap because of problem with endianness...
+        uint8_t tmp;
+        tmp = buffer[cnt - 4];
+        buffer[cnt - 4] = buffer[cnt - 1];
+        buffer[cnt - 1] = tmp;
+        tmp = buffer[cnt - 3];
+        buffer[cnt - 3] = buffer[cnt - 2];
+        buffer[cnt - 2] = tmp;
+      }
       total++;
     }
+
     if (cnt == MAX_BUF) {
+      loop++;
+      start = (loop - 1) * MAX_BUF / 4;
+      end = start + MAX_BUF / 4;
       // Reached buffer's capacity, write the data to the block ram
-      for (int i = 0; i < MAX_BUF/4; i++) {
+      memcpy(word_buffer, buffer, MAX_BUF);
+      for (int i = start; i < end; i++) {
         application_elf_mmio[i] = word_buffer[i];
       }
       cnt = 0;
     }
   }
   // We have received all characters, copy the rest to MMIO
-  for (int i = (total-cnt)/4; i < total/4; i++) {
+  memcpy(word_buffer, buffer, cnt);
+  start = (loop - 1) * MAX_BUF / 4;
+  end = start + cnt / 4;
+  for (int i = start; i < end; i++) {
     application_elf_mmio[i] = word_buffer[i];
   }
-  // Assume a multiple of 4 bytes, so we don't expect any residue bytes
-
 
   kprintf("BOOTSTRAP: received %d bytes for the ELF binary, ", total);
   kprintf("which have been written to the BlockRAM.\n");
+  for (int i = 0; i < 64; i += 4) {
+    print_hex(buffer2[i], 2);
+    kprintf(" ");
+    print_hex(buffer2[i+1], 2);
+    kprintf(" ");
+    print_hex(buffer2[i+2], 2);
+    kprintf(" ");
+    print_hex(buffer2[i+3], 2);
+    kprintf("\n");
+  }
+
+  for (int i = 0; i < 64; i += 4) {
+    print_hex(application_elf_mmio[i], 8);
+    kprintf(" ");
+    print_hex(application_elf_mmio[i+1], 8);
+    kprintf(" ");
+    print_hex(application_elf_mmio[i+2], 8);
+    kprintf(" ");
+    print_hex(application_elf_mmio[i+3], 8);
+    kprintf("\n");
+  }
+
   kprintf("BOOTSTRAP: performing reset.\n");
   // Send ACKnowledge character to signal that bootstrap has finished
   kputc(ASCII_ACK);
 
   // Wait a bit for the UART buffers to be flushed
-  usleep(100000);
+  usleep(200000);
 
   // Perform the reset, repeatedly in a while loop to make sure
   // the reset will eventually happen
