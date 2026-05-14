@@ -8,30 +8,7 @@
 #include "kprintf.h"
 
 #include "blockram.h"
-
-// The reset control register allows us to signal a CPU reset
-#define RESET_CTRL_BASE         0x60040000
-
-// The bootstrap application mmio region is reserved for configuration data
-// concerning the benchmark application to be run.
-#define BOOTSTRAP_BASE          0x60050000
-
-// Bootstrap configuration bytes received from the host: each configuration
-// parameter contains an unsigned integer of 4 bytes.
-#define BOOTSTRAP_CONF_OFFSET   0x0000fc00
-#define BOOTSTRAP_CONF_ADDR     (BOOTSTRAP_BASE + BOOTSTRAP_CONF_OFFSET)
-#define BOOTSTRAP_CONF_BYTECNT  24
-#define BOOTSTRAP_CONF_PARAMCNT 6
-// Indices of the configuration parameters, using integer pointer arithmetic
-#define APPLICATION_BOOTCNT     0
-#define APPLICATION_BOOTCNT_MAX 1
-#define APPLICATION_ELF_SIZE    2
-#define INPUT_ARRAY_START       3
-#define INPUT_ARRAY_END         4
-#define INPUT_ARRAY_SIZE        5
-
-// The benchmark application mmio region
-#define APPLICATION_BASE        0x60080000
+#include "bootstrap.h"
 
 
 /* Card type flags (card_type) */
@@ -612,23 +589,24 @@ int main(void) {
     uint64_t * bss = (uint64_t *)_fbss;
     while (bss < (uint64_t *)_ebss) *bss++ = 0;
 
-    uint32_t *bootmem_bootstrap = (uint32_t *) BOOTSTRAP_CONF_ADDR;
-    volatile uint32_t boot_num = bootmem_bootstrap[APPLICATION_BOOTCNT]++;
-    volatile uint32_t boot_max = bootmem_bootstrap[APPLICATION_BOOTCNT_MAX];
+    uint32_t *bootstrap_base = (uint32_t *) BOOTSTRAP_BASE;
+    uint32_t *application_base = (uint32_t *) APPLICATION_BASE;
 
-    uint32_t *bootmem_application = (uint32_t *) APPLICATION_BASE;
+    uint32_t *bootstrap_config = (uint32_t *) BOOTSTRAP_CONF_ADDR;
+    volatile uint32_t boot_num = bootstrap_config[APPLICATION_BOOTCNT]++;
+    volatile uint32_t boot_max = bootstrap_config[APPLICATION_BOOTCNT_MAX];
 
     if (!boot_num) {
       // First time boot!
       kprintf("BOOTROM: FIRST BOOT - running bootstrap application, ");
-      set_blockram_address(bootmem_bootstrap);
+      set_blockram_address(bootstrap_base);
     } else if (boot_num > boot_max) {
       kprintf("BOOTROM: Maximum number of boots reached - ");
       kprintf("running bootstrap application again, ");
-      set_blockram_address(bootmem_bootstrap);
+      set_blockram_address(bootstrap_base);
     } else {
       kprintf("BOOTROM: running benchmark application, ");
-      set_blockram_address(bootmem_application);
+      set_blockram_address(application_base);
     }
     kprintf("bootnum=%d\n", boot_num);
 

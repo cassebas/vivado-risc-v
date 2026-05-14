@@ -7,6 +7,8 @@
 #include "bootstrap.h"
 
 
+static void sleep_ms(unsigned ms);
+
 
 int main(void)
 {
@@ -124,7 +126,7 @@ int main(void)
   kputc(ASCII_ACK);
 
   // Wait a bit for the UART buffers to be flushed
-  usleep(200000);
+  sleep_ms(200);
 
   // Perform the reset, repeatedly in a while loop to make sure
   // the reset will eventually happen
@@ -134,7 +136,7 @@ int main(void)
     *reset_ctrl_reg = 0xffffffff;
 
     // Wait a bit before trying again
-    usleep(100000);
+    sleep_ms(100);
   }
 
   return 0;
@@ -162,18 +164,6 @@ void print_hex(uintptr_t h, uint8_t n)
     kprintf("%s", buf);
 }
 
-void usleep(unsigned us)
-{
-    uintptr_t cycles0;
-    uintptr_t cycles1;
-    asm volatile ("csrr %0, 0xB00" : "=r" (cycles0));
-    for (;;) {
-        asm volatile ("csrr %0, 0xB00" : "=r" (cycles1));
-        if (cycles1 - cycles0 >= us * 100) break;
-    }
-}
-
-
 uint32_t get_word(uint8_t *buffer)
 {
   uint32_t word = 0;
@@ -189,4 +179,14 @@ uint32_t get_word(uint8_t *buffer)
   }
 
   return word;
+}
+
+static void sleep_ms(unsigned ms)
+{
+  uintptr_t cycles0, cycles1;
+  asm volatile ("csrr %0, 0xB00" : "=r" (cycles0));
+  for (;;) {
+    asm volatile ("csrr %0, 0xB00" : "=r" (cycles1));
+    if (cycles1 - cycles0 >= ms * 100000) break;
+  }
 }

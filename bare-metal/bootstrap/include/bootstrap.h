@@ -36,11 +36,10 @@
 #define ASCII_ENQ 0x05 // From ASCII table: non-printable ENQuiry character
 #define ASCII_ACK 0x06 // From ASCII table: non-printable ACKnowledge character
 
+
 void print_hex(uintptr_t h, uint8_t n);
-void usleep(unsigned us);
-
 uint32_t get_word(uint8_t *buffer);
-
 size_t read(uint8_t *buffer, size_t n);
+
 
 #endif // BOOTSTRAP_H

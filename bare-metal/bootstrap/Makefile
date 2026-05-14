@@ -8,6 +8,7 @@ CFLAGS += -Wall -std=gnu99 -MD
 CFLAGS += -O2
 CFLAGS += -mcmodel=medany -Wall
 CFLAGS += -fno-pic -fno-common
+CFLAGS += -Iinclude
 
 LDFLAGS = -static -nostartfiles -T main.lds
 
