@@ -39,13 +39,13 @@ FRESULT br_close (BlockRam *fp)
 
 static inline uint8_t get_byte_from_word(uint32_t word, uint8_t idx)
 {
-    if (idx == 0) {
+    if (idx == 3) {
         return (uint8_t) ((word >> 24) & 0xFF);
-    } else if (idx == 1) {
-        return (uint8_t) ((word >> 16) & 0xFF);
     } else if (idx == 2) {
+        return (uint8_t) ((word >> 16) & 0xFF);
+    } else if (idx == 1) {
         return (uint8_t) ((word >> 8) & 0xFF);
-    } else if (idx == 3) {
+    } else if (idx == 0) {
         return (uint8_t) (word & 0xFF);
     } else {
         return 0;
