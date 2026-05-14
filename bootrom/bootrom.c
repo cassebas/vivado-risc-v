@@ -614,7 +614,7 @@ int main(void) {
 
     uint32_t *bootmem_bootstrap = (uint32_t *) BOOTSTRAP_CONF_ADDR;
     volatile uint32_t boot_num = bootmem_bootstrap[APPLICATION_BOOTCNT]++;
-    volatile uint32_t boot_max = bootmem_bootstrap[APPLICATION_BOOTCNT_MAX]++;
+    volatile uint32_t boot_max = bootmem_bootstrap[APPLICATION_BOOTCNT_MAX];
 
     uint32_t *bootmem_application = (uint32_t *) APPLICATION_BASE;
 
