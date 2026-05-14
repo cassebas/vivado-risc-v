@@ -8,9 +8,8 @@ entity boot_device_addrtranslator is
            BRAM_ADDR_WIDTH : integer := 16;
            BRAM_WEA_WIDTH  : integer := 4;
 
-           INPUT_IDX_LEN   : integer := 256;
-           INPUT_IDX_LO    : integer := 16#5CA4#;
-           INPUT_IDX_HI    : integer := 16#5DA3#;
+           INPUT_IDX_LO    : integer := 16#5A2#;
+           INPUT_IDX_HI    : integer := 16#5AB#;
 
            BRAM_SIZE       : integer := 4096;
            ARRAY_SIZE      : integer := 256);

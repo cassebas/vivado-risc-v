@@ -5,12 +5,12 @@ use ieee.numeric_std.all;
 
 entity boot_device is
 
-  generic (S00_AXI_DATA_WIDTH : integer   := 32;
-           S00_AXI_ADDR_WIDTH : integer   := 16;
-           S01_AXI_DATA_WIDTH : integer   := 32;
-           S01_AXI_ADDR_WIDTH : integer   := 18;
+  generic (S00_AXI_DATA_WIDTH : integer := 32;
+           S00_AXI_ADDR_WIDTH : integer := 16;
+           S01_AXI_DATA_WIDTH : integer := 32;
+           S01_AXI_ADDR_WIDTH : integer := 18;
            BRAM_SIZE        : integer   := 4096;
-           ARRAY_SIZE       : integer   := 256);
+           ARRAY_SIZE       : integer   := 10);
 
   port (cpu_reset_n     : in std_logic;  --  CPU reset, active low
 
