@@ -195,8 +195,7 @@ architecture behavior of boot_device is
     generic (BRAM_DATA_WIDTH : integer;
              BRAM_ADDR_WIDTH : integer;
              BRAM_WEA_WIDTH  : integer;
-             BRAM_SIZE       : integer;
-             ARRAY_SIZE      : integer);
+             BRAM_SIZE       : integer);
 
     port (clk                  : in std_logic;
           rst_n                : in std_logic;
@@ -393,8 +392,7 @@ begin
     generic map (BRAM_DATA_WIDTH => BRAM1_DATA_WIDTH,
                  BRAM_ADDR_WIDTH => BRAM1_ADDR_WIDTH,
                  BRAM_WEA_WIDTH  => BRAM1_WEA_WIDTH,
-                 BRAM_SIZE       => BRAM_SIZE,
-                 ARRAY_SIZE      => ARRAY_SIZE)
+                 BRAM_SIZE       => BRAM_SIZE)
 
     port map (clk                  => S00_AXI_aclk,
               rst_n                => S00_AXI_aresetn,
