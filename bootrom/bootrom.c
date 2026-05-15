@@ -138,6 +138,8 @@ static BlockRam fd __attribute__((section(".bss")));
 extern unsigned char _fbss[];
 extern unsigned char _ebss[];
 
+static void reset_cpu(void);
+
 static const char * errno_to_str(void) {
     switch (errno) {
     case FR_OK: return "No error";
@@ -619,9 +621,33 @@ int main(void) {
         else {
             if (download() != 0) {
                 kprintf("Cannot read BOOT.ELF: %s\n", errno_to_str());
+            } else {
+              // The application has returned from its main function
+              kprintf("BOOTROM: resetting the CPU.");
+              reset_cpu();
             }
         }
     }
 
     return 0;
+}
+
+static void reset_cpu(void)
+{
+  volatile uint32_t *reset_ctrl_reg = (uint32_t *) RESET_CTRL_BASE;
+
+  // Wait a bit for the UART buffers to be flushed
+  usleep(2000);
+
+  // Perform the reset and enter an endless while loop to make sure
+  // the reset will eventually happen
+
+  // Set the reset control register to all ones, signalling CPU reset.
+  *reset_ctrl_reg = 0xffffffff;
+
+  while (1) {
+    // Wait a bit...
+    usleep(100000);
+    kprintf(".");
+  }
 }
