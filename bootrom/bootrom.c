@@ -576,8 +576,12 @@ static int download(void) {
         asm volatile ("addi t2, t2, 8");
         asm volatile ("bne  t0, t1, boot_rom_memcpy");
 
+        asm volatile ("addi sp, sp, -16");
+        asm volatile ("sw   ra, 12(sp)");
         asm volatile ("fence.i" ::: "memory");
-        asm volatile ("jalr a5");
+        asm volatile ("jalr ra, 0(a5)");
+        asm volatile ("lw   ra, 12(sp)");
+        asm volatile ("addi sp, sp, 16");
     } else {
         asm volatile ("fence.i" ::: "memory");
         asm volatile ("jalr %0" :: "r" (entry_addr));
