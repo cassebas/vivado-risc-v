@@ -544,6 +544,7 @@ static int download(void) {
     asm volatile ("li  a0, 0"); // Hart No
     asm volatile ("li  a1, %0" :: "n" (BOOTROM_DTB_ADDR)); // Device Tree
     if (alt_mem) {
+        kprintf("alt_mem\n");
 #if __riscv_xlen <= 32 || (BOOTROM_MEM_END < 0x80000000 && BOOTROM_MEM_ALT < 0x80000000)
         asm volatile ("li  t0, %0" :: "n" (BOOTROM_MEM_ADDR));
         asm volatile ("li  t1, %0" :: "n" (BOOTROM_MEM_END));
@@ -576,15 +577,21 @@ static int download(void) {
         asm volatile ("addi t2, t2, 8");
         asm volatile ("bne  t0, t1, boot_rom_memcpy");
 
+        asm volatile ("fence.i" ::: "memory");
         asm volatile ("addi sp, sp, -16");
         asm volatile ("sw   ra, 12(sp)");
-        asm volatile ("fence.i" ::: "memory");
         asm volatile ("jalr ra, 0(a5)");
         asm volatile ("lw   ra, 12(sp)");
         asm volatile ("addi sp, sp, 16");
     } else {
+        kprintf("no alt_mem\n");
+
         asm volatile ("fence.i" ::: "memory");
-        asm volatile ("jalr %0" :: "r" (entry_addr));
+        asm volatile ("addi sp, sp, -16");
+        asm volatile ("sw   ra, 12(sp)");
+        asm volatile ("jalr ra, 0(%0)" :: "r" (entry_addr));
+        asm volatile ("lw   ra, 12(sp)");
+        asm volatile ("addi sp, sp, 16");
     }
 
     return 0;
