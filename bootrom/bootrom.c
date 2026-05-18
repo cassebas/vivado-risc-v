@@ -544,7 +544,6 @@ static int download(void) {
     asm volatile ("li  a0, 0"); // Hart No
     asm volatile ("li  a1, %0" :: "n" (BOOTROM_DTB_ADDR)); // Device Tree
     if (alt_mem) {
-        kprintf("alt_mem\n");
 #if __riscv_xlen <= 32 || (BOOTROM_MEM_END < 0x80000000 && BOOTROM_MEM_ALT < 0x80000000)
         asm volatile ("li  t0, %0" :: "n" (BOOTROM_MEM_ADDR));
         asm volatile ("li  t1, %0" :: "n" (BOOTROM_MEM_END));
@@ -579,13 +578,11 @@ static int download(void) {
 
         asm volatile ("fence.i" ::: "memory");
         asm volatile ("addi sp, sp, -16");
-        asm volatile ("sw   ra, 12(sp)");
+        asm volatile ("sw   a3, 12(sp)");
         asm volatile ("jalr ra, 0(a5)");
         asm volatile ("lw   ra, 12(sp)");
         asm volatile ("addi sp, sp, 16");
     } else {
-        kprintf("no alt_mem\n");
-
         asm volatile ("fence.i" ::: "memory");
         asm volatile ("addi sp, sp, -16");
         asm volatile ("sw   ra, 12(sp)");
@@ -606,22 +603,36 @@ int main(void) {
     uint32_t *application_base = (uint32_t *) APPLICATION_BASE;
 
     uint32_t *bootstrap_config = (uint32_t *) BOOTSTRAP_CONF_ADDR;
-    volatile uint32_t boot_num = bootstrap_config[APPLICATION_BOOTCNT]++;
+    volatile uint32_t boot_num = bootstrap_config[APPLICATION_BOOTCNT];
     volatile uint32_t boot_max = bootstrap_config[APPLICATION_BOOTCNT_MAX];
 
     if (!boot_num) {
       // First time boot!
       kprintf("BOOTROM: FIRST BOOT - running bootstrap application, ");
+      kprintf("bootnum=%d\n", boot_num);
+
       set_blockram_address(bootstrap_base);
+      // Set the boot number to 1, for the next boot to be the application
+      boot_num = 1;
+
     } else if (boot_num > boot_max) {
       kprintf("BOOTROM: Maximum number of boots reached - ");
       kprintf("running bootstrap application again, ");
+      kprintf("bootnum=%d\n", boot_num);
+
       set_blockram_address(bootstrap_base);
+      // Reset the boot number to 0, next boot will be bootstrap again
+      boot_num = 0;
     } else {
       kprintf("BOOTROM: running benchmark application, ");
+      kprintf("bootnum=%d\n", boot_num);
+
       set_blockram_address(application_base);
+      // Increase boot number by 1, for the next boot (again application)
+      boot_num++;
     }
-    kprintf("bootnum=%d\n", boot_num);
+    // Put back the new boot_num for the next boot
+    bootstrap_config[APPLICATION_BOOTCNT] = boot_num;
 
     for (;;) {
         drv_status = STA_NOINIT;
@@ -634,7 +645,9 @@ int main(void) {
                 kprintf("Cannot read BOOT.ELF: %s\n", errno_to_str());
             } else {
               // The application has returned from its main function
-              kprintf("BOOTROM: resetting the CPU.");
+              kprintf("BOOTROM: resetting the CPU.\n");
+
+              // And reset
               reset_cpu();
             }
         }

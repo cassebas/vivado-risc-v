@@ -121,23 +121,12 @@ int main(void)
 
   }
 
-  kprintf("BOOTSTRAP: performing reset.\n");
   // Send ACKnowledge character to signal that bootstrap has finished
+  kprintf("BOOTSTRAP: sending ACK to host.\n");
   kputc(ASCII_ACK);
 
   // Wait a bit for the UART buffers to be flushed
   sleep_ms(200);
-
-  // Perform the reset, repeatedly in a while loop to make sure
-  // the reset will eventually happen
-  while (1) {
-    // Set the reset control register to all ones, signalling CPU reset.
-    kprintf(".");
-    *reset_ctrl_reg = 0xffffffff;
-
-    // Wait a bit before trying again
-    sleep_ms(100);
-  }
 
   return 0;
 }
