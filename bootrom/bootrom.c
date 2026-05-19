@@ -606,35 +606,27 @@ int main(void) {
     volatile uint32_t boot_num = bootstrap_config[APPLICATION_BOOTCNT];
     volatile uint32_t boot_max = bootstrap_config[APPLICATION_BOOTCNT_MAX];
 
+    kprintf("BOOTROM: [bootnum=%d] ", boot_num);
     if (!boot_num) {
       // First time boot!
-      kprintf("BOOTROM: bootnum=%d ", boot_num);
-      kprintf("- FIRST BOOT -> running bootstrap application\n");
+      kprintf("FIRST BOOT - running bootstrap application\n");
 
-      // Set the boot number to 1, for the next boot to be the application
-      boot_num = 1;
       // Set the start address of the application to bootstrap
       set_blockram_address(bootstrap_base);
     } else if (boot_num > boot_max) {
-      kprintf("BOOTROM: bootnum=%d ", boot_num);
-      kprintf("- max number of boots reached. ");
-      kprintf(" Running bootstrap application again.\n");
+      kprintf("Maximum number of boots reached. Running bootstrap.\n");
 
-      // Reset the boot number to 0, next boot will be bootstrap again
-      boot_num = 0;
       // Set the start address of the application to bootstrap
       set_blockram_address(bootstrap_base);
     } else {
-      kprintf("BOOTROM: bootnum=%d ", boot_num);
-      kprintf("- running benchmark application.\n");
+      kprintf("Running benchmark application.\n");
 
-      // Increase boot number by 1, for the next boot (again application)
-      boot_num++;
       // Set the start address of the application to the application
       set_blockram_address(application_base);
+
+      // Increase boot number by 1, for the next boot
+      bootstrap_config[APPLICATION_BOOTCNT]++;
     }
-    // Put back the new boot_num for the next boot
-    bootstrap_config[APPLICATION_BOOTCNT] = boot_num;
 
     for (;;) {
         drv_status = STA_NOINIT;

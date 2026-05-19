@@ -8,6 +8,7 @@
 
 
 static void sleep_ms(unsigned ms);
+static void sync_with_host(void);
 
 
 int main(void)
@@ -22,9 +23,11 @@ int main(void)
   volatile uint32_t *reset_ctrl_reg = (uint32_t *) RESET_CTRL_BASE;
   *reset_ctrl_reg = 0;
 
-  kprintf("BOOTSTRAP: start receiving configuration from host.\n");
-  kputc(ASCII_ENQ);
+  kprintf("BOOTSTRAP: initiate first sync with host..");
+  sync_with_host();
+  kprintf(".sync OK.\n");
 
+  kprintf("BOOTSTRAP: start receiving configuration from host.\n");
   // Configuration bytes
   // The write function on the host will send the most significant byte first,
   // since it runs a little endian system.
@@ -59,11 +62,13 @@ int main(void)
   print_hex(bootstrap_cfg_mmio[INPUT_ARRAY_SIZE], 8);
   kprintf("\n");
 
-  // Send another ENQuiry character to request the bytes from the ELF file
-  kputc(ASCII_ENQ);
+  kprintf("BOOTSTRAP: initiate second sync with host..");
+  sync_with_host();
+  kprintf(".sync OK.\n");
 
   const size_t nbytes = bootstrap_cfg_mmio[APPLICATION_ELF_SIZE];
-  kprintf("BOOTSTRAP: receiving %d bytes of the ELF binary.\n", nbytes);
+  kprintf("BOOTSTRAP: start receiving %d bytes of the ELF binary.\n", nbytes);
+
   volatile uint32_t *application_elf_mmio = (uint32_t *) APPLICATION_BASE;
   int total = 0, loop = 0, start, end;
   cnt = 0;
@@ -92,8 +97,8 @@ int main(void)
     application_elf_mmio[i+start] = word_buffer[i];
   }
 
-  kprintf("BOOTSTRAP: received %d bytes for the ELF binary, ", total);
-  kprintf("which have been written to the BlockRAM.\n");
+  kprintf("BOOTSTRAP: received %d bytes, ", total);
+  kprintf("which have been written to BlockRAM.\n");
   if (DEBUG) {
     end = start + cnt / 4;
     kprintf("BOOTSTRAP: loop = %d, start = %d.\n", loop, start);
@@ -121,9 +126,9 @@ int main(void)
 
   }
 
-  // Send ACKnowledge character to signal that bootstrap has finished
-  kprintf("BOOTSTRAP: sending ACK to host.\n");
-  kputc(ASCII_ACK);
+  kprintf("BOOTSTRAP: initiate final sync with host..");
+  sync_with_host();
+  kprintf(".sync OK.\n");
 
   // Wait a bit for the UART buffers to be flushed
   sleep_ms(200);
@@ -177,5 +182,33 @@ static void sleep_ms(unsigned ms)
   for (;;) {
     asm volatile ("csrr %0, 0xB00" : "=r" (cycles1));
     if (cycles1 - cycles0 >= ms * 100000) break;
+  }
+}
+
+static void sync_with_host(void)
+{
+  const int TIMEOUT = 100;
+  int checks= 0;
+  char c;
+  bool done = false;
+
+  // Send the synchronization request to the host
+  kputc(ASCII_ENQ);
+
+  while (!done) {
+    // Now try to receive the ACK
+    while (!done && checks++ < TIMEOUT) {
+      if (kdata_ready()) {
+        if ((c = kgetc()) == ASCII_ACK) {
+          done = true;
+        }
+      }
+    }
+    if (!done) {
+      // Wait a bit before trying again
+      sleep_ms(1);
+      // And reset checks for the next try
+      checks = 0;
+    }
   }
 }
