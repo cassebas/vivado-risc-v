@@ -608,28 +608,30 @@ int main(void) {
 
     if (!boot_num) {
       // First time boot!
-      kprintf("BOOTROM: FIRST BOOT - running bootstrap application, ");
-      kprintf("bootnum=%d\n", boot_num);
+      kprintf("BOOTROM: bootnum=%d ", boot_num);
+      kprintf("- FIRST BOOT -> running bootstrap application\n");
 
-      set_blockram_address(bootstrap_base);
       // Set the boot number to 1, for the next boot to be the application
       boot_num = 1;
-
-    } else if (boot_num > boot_max) {
-      kprintf("BOOTROM: Maximum number of boots reached - ");
-      kprintf("running bootstrap application again, ");
-      kprintf("bootnum=%d\n", boot_num);
-
+      // Set the start address of the application to bootstrap
       set_blockram_address(bootstrap_base);
+    } else if (boot_num > boot_max) {
+      kprintf("BOOTROM: bootnum=%d ", boot_num);
+      kprintf("- max number of boots reached. ");
+      kprintf(" Running bootstrap application again.\n");
+
       // Reset the boot number to 0, next boot will be bootstrap again
       boot_num = 0;
+      // Set the start address of the application to bootstrap
+      set_blockram_address(bootstrap_base);
     } else {
-      kprintf("BOOTROM: running benchmark application, ");
-      kprintf("bootnum=%d\n", boot_num);
+      kprintf("BOOTROM: bootnum=%d ", boot_num);
+      kprintf("- running benchmark application.\n");
 
-      set_blockram_address(application_base);
       // Increase boot number by 1, for the next boot (again application)
       boot_num++;
+      // Set the start address of the application to the application
+      set_blockram_address(application_base);
     }
     // Put back the new boot_num for the next boot
     bootstrap_config[APPLICATION_BOOTCNT] = boot_num;
