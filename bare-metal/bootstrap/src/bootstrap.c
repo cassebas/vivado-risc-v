@@ -8,7 +8,14 @@
 
 
 static void sleep_ms(unsigned ms);
-static void sync_with_host(void);
+static void sync_with_host(uint8_t sync_nr);
+
+
+char magic_token[] = {
+  ASCII_SOH, ASCII_SOT, ASCII_ETX, ASCII_EOT,  // First sync
+  ASCII_ENQ, ASCII_ACK, ASCII_BEL, ASCII_BS,   // Second sync
+  ASCII_BS,  ASCII_BEL, ASCII_ACK, ASCII_ENQ,  // Third sync
+};
 
 
 int main(void)
@@ -23,8 +30,13 @@ int main(void)
   volatile uint32_t *reset_ctrl_reg = (uint32_t *) RESET_CTRL_BASE;
   *reset_ctrl_reg = 0;
 
+  // First empty any remaining bytes from the UART if any
+  while (kdata_ready()) {
+    kgetc();
+  }
+
   kprintf("BOOTSTRAP: initiate first sync with host..");
-  sync_with_host();
+  sync_with_host(1);
   kprintf(".sync OK.\n");
 
   kprintf("BOOTSTRAP: start receiving configuration from host.\n");
@@ -63,7 +75,7 @@ int main(void)
   kprintf("\n");
 
   kprintf("BOOTSTRAP: initiate second sync with host..");
-  sync_with_host();
+  sync_with_host(2);
   kprintf(".sync OK.\n");
 
   const size_t nbytes = bootstrap_cfg_mmio[APPLICATION_ELF_SIZE];
@@ -127,7 +139,7 @@ int main(void)
   }
 
   kprintf("BOOTSTRAP: initiate final sync with host..");
-  sync_with_host();
+  sync_with_host(3);
   kprintf(".sync OK.\n");
 
   // Wait a bit for the UART buffers to be flushed
@@ -185,12 +197,15 @@ static void sleep_ms(unsigned ms)
   }
 }
 
-static void sync_with_host(void)
+static void sync_with_host(uint8_t sync_nr)
 {
   const int TIMEOUT = 100;
   int checks= 0;
   char c;
   bool done = false;
+
+  uint8_t init_state = 4 * (sync_nr - 1);
+  uint8_t state = init_state;
 
   // Send the synchronization request to the host
   kputc(ASCII_ENQ);
@@ -199,11 +214,20 @@ static void sync_with_host(void)
     // Now try to receive the ACK
     while (!done && checks++ < TIMEOUT) {
       if (kdata_ready()) {
-        if ((c = kgetc()) == ASCII_ACK) {
-          done = true;
+
+        // The ACK actually is a sequence of specific bytes, defined
+        // by magic_token. This will ensure that the `ACK' won't be
+        // accidentally sent in the data.
+        if ((c = kgetc()) == magic_token[state]) {
+          if ((++state) - init_state == 4) {
+            done = true;
+          }
+        } else {
+          state = init_state;
         }
       }
     }
+
     if (!done) {
       // Wait a bit before trying again
       sleep_ms(1);
