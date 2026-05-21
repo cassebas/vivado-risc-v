@@ -7,7 +7,7 @@
 
 #define DEBUG 0
 
-#define MAX_BUF 256
+#define MAX_BUF 1024
 
 // The reset control register allows us to signal a CPU reset
 #define RESET_CTRL_BASE         0x60040000

@@ -36,6 +36,7 @@ int main(void)
   }
 
   kprintf("BOOTSTRAP: initiate first sync with host..");
+  sleep_ms(50);
   sync_with_host(1);
   kprintf(".sync OK.\n");
 
@@ -75,6 +76,7 @@ int main(void)
   kprintf("\n");
 
   kprintf("BOOTSTRAP: initiate second sync with host..");
+  sleep_ms(50);
   sync_with_host(2);
   kprintf(".sync OK.\n");
 
@@ -105,7 +107,7 @@ int main(void)
   // We have received all characters, copy the rest to MMIO
   memcpy(word_buffer, buffer, cnt);
   start = loop * MAX_BUF / 4;
-  for (int i = 0; i < cnt; i++) {
+  for (int i = 0; i < cnt/4; i++) {
     application_elf_mmio[i+start] = word_buffer[i];
   }
 
@@ -113,7 +115,7 @@ int main(void)
   kprintf("which have been written to BlockRAM.\n");
   if (DEBUG) {
     end = start + cnt / 4;
-    kprintf("BOOTSTRAP: loop = %d, start = %d.\n", loop, start);
+    kprintf("BOOTSTRAP: cnt = %d, loop = %d, start = %d.\n", cnt, loop, start);
     for (int i = 0; i < 32; i += 4) {
       print_hex(application_elf_mmio[i], 8);
       kprintf(" ");
@@ -135,10 +137,10 @@ int main(void)
       print_hex(application_elf_mmio[i+3], 8);
       kprintf("\n");
     }
-
   }
 
   kprintf("BOOTSTRAP: initiate final sync with host..");
+  sleep_ms(50);
   sync_with_host(3);
   kprintf(".sync OK.\n");
 
@@ -229,8 +231,6 @@ static void sync_with_host(uint8_t sync_nr)
     }
 
     if (!done) {
-      // Wait a bit before trying again
-      sleep_ms(1);
       // And reset checks for the next try
       checks = 0;
     }
