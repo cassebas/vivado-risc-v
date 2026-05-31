@@ -9,99 +9,110 @@
 
 #include "blockram.h"
 #include <stddef.h>
+#include <stdint.h>
 
 static uint32_t *blockram_addr;
 
 /* Open or create a file */
 FRESULT br_open (BlockRam *fp, const TCHAR *path, BYTE mode)
 {
-    if (fp == NULL) {
-        return FR_INVALID_PARAMETER;
-    }
+  if (fp == NULL) {
+    return FR_INVALID_PARAMETER;
+  }
 
-    fp->memptr = blockram_addr;
-    fp->byte_index = 0;
+  fp->memptr = blockram_addr;
+  fp->byte_index = 0;
 
-    return FR_OK;
+  return FR_OK;
 }
 
 /* Close an open file object */
 FRESULT br_close (BlockRam *fp)
 {
-    if (fp == NULL) {
-        return FR_INVALID_PARAMETER;
-    }
+  if (fp == NULL) {
+    return FR_INVALID_PARAMETER;
+  }
 
-    fp->byte_index = 0;
+  fp->byte_index = 0;
 
-    return FR_OK;
+  return FR_OK;
 }
 
 static inline uint8_t get_byte_from_word(uint32_t word, uint8_t idx)
 {
-    if (idx == 3) {
-        return (uint8_t) ((word >> 24) & 0xFF);
-    } else if (idx == 2) {
-        return (uint8_t) ((word >> 16) & 0xFF);
-    } else if (idx == 1) {
-        return (uint8_t) ((word >> 8) & 0xFF);
-    } else if (idx == 0) {
-        return (uint8_t) (word & 0xFF);
-    } else {
-        return 0;
-    }
+  if (idx == 3) {
+    return (uint8_t) ((word >> 24) & 0xFF);
+  } else if (idx == 2) {
+    return (uint8_t) ((word >> 16) & 0xFF);
+  } else if (idx == 1) {
+    return (uint8_t) ((word >> 8) & 0xFF);
+  } else if (idx == 0) {
+    return (uint8_t) (word & 0xFF);
+  } else {
+    return 0;
+  }
 }
 
 /* Read data from the file */
 FRESULT br_read (BlockRam *fp, void *buff, UINT btr, UINT *br)
 {
-    if (fp == NULL) {
-        return FR_INVALID_PARAMETER;
+  if (fp == NULL) {
+    return FR_INVALID_PARAMETER;
+  }
+
+  /* Clear read byte counter */
+  *br = 0;
+
+  // Immediately return if bytes to read is equal to zero
+  if (!btr)
+    return FR_OK;
+
+  uint32_t blockmem_idx = fp->byte_index >> 2;
+  uint8_t blockmem_offset = fp->byte_index & 0x3;
+
+  if (btr % 4 == 0 && blockmem_offset == 0) {
+    uint32_t *wordbuff = (uint32_t *) buff;
+    while (btr > 0) {
+      *wordbuff++ = fp->memptr[blockmem_idx++];
+      fp->byte_index += 4;
+      *br += 4;
+      btr -= 4;
     }
-
-    /* Clear read byte counter */
-    *br = 0;
-
-    uint8_t *mybuff = (uint8_t *) buff;
-    uint32_t blockmem_idx = fp->byte_index >> 2;
-    uint8_t blockmem_offset = fp->byte_index & 0x3;
-
+  } else {
+    uint8_t *bytebuff = (uint8_t *) buff;
     uint32_t word = fp->memptr[blockmem_idx++];
-    uint32_t bytes_read = 0;
-
     while (btr-- > 0) {
-      *mybuff++ = get_byte_from_word(word, blockmem_offset);
+      *bytebuff++ = get_byte_from_word(word, blockmem_offset);
       fp->byte_index++;
-      bytes_read++;
+      (*br)++;
       if (++blockmem_offset == 4) {
         word = fp->memptr[blockmem_idx++];
         blockmem_offset = 0;
       }
     }
+  }
 
-    *br = bytes_read;
-
-    return FR_OK;
+  return FR_OK;
 }
 
 /* Move file pointer of the file object */
 FRESULT br_lseek (BlockRam *fp, FSIZE_t ofs)
 {
-    if (fp == NULL) {
-        return FR_INVALID_PARAMETER;
-    }
+  if (fp == NULL) {
+    return FR_INVALID_PARAMETER;
+  }
 
-    fp->byte_index = ofs;
-    return FR_OK;
+  fp->byte_index = ofs;
+  return FR_OK;
 }
 
 /* Mount/Unmount a logical drive */
 FRESULT br_mount (FATFS *fs, const TCHAR *path, BYTE opt)
 {
-    return FR_OK;
+  return FR_OK;
 }
 
 void set_blockram_address(uint32_t *addr)
 {
-    blockram_addr = addr;
+  blockram_addr = addr;
 }
