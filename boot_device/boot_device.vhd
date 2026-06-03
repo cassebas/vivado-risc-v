@@ -360,7 +360,7 @@ begin
                  BD_AXISLAVE_WEA_WIDTH  => BRAM1_WEA_WIDTH)
 
     port map (axislave_addr_o => addr_app1,
-              axislave_data_i => data_read_app1,
+              axislave_data_i => app_data_read,
               axislave_data_o => data_write_app1,
               axislave_wea_o  => wea_app1,
 
