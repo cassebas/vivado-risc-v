@@ -28,10 +28,10 @@ end entity boot_device_addrtranslator;
 
 architecture structural of boot_device_addrtranslator is
 
-  signal bram_idx_input  : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
-  signal bram_idx_new    : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
-  signal bram_idx_offset : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (others => '0');
-  signal bram_idx_offset_nxt : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
+  signal tr_addr  : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
+  signal input_addr    : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
+  signal input_addr_offset : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (others => '0');
+  signal input_addr_offset_nxt : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
 
   -- These are addresses of the MMIO (BRAM) addresses where the
   -- ranges are stored of the input values located in the ELF
@@ -60,11 +60,12 @@ begin
   tr_app_data_o <= tr_data_i;
 
   tr_input_wea_o <= tr_wea_i;
-  tr_input_addr_o <= std_logic_vector(bram_idx_new);
+  tr_input_addr_o <= std_logic_vector(input_addr);
   tr_input_data_o <= tr_data_i;
+  tr_addr <= unsigned(tr_addr_i);
 
-  bram_idx_new <= bram_idx_input - addr_array_lo + bram_idx_offset;
-  bram_idx_offset_nxt <= bram_idx_offset + array_size;
+  input_addr <= tr_addr - addr_array_lo + input_addr_offset;
+  input_addr_offset_nxt <= input_addr_offset + array_size;
   max_offset <= BRAM_SIZE - array_size;
 
   appdata_mux_ctrl_o <= appdata_mux_ctrl;
@@ -76,9 +77,9 @@ begin
       if cpu_reset_n = '0' then
         -- Only increase offset upon a *new* reset event
         if reset_active = '0' then
-          bram_idx_offset <= bram_idx_offset_nxt;
-          if bram_idx_offset = max_offset then
-            bram_idx_offset <= (others => '0');
+          input_addr_offset <= input_addr_offset_nxt;
+          if input_addr_offset = max_offset then
+            input_addr_offset <= (others => '0');
             inputdata_mux_ctrl <= not inputdata_mux_ctrl;
           end if;
           reset_active <= '1';
@@ -89,13 +90,11 @@ begin
     end if;
   end process compute_offset;
 
-  bram_idx_input <= unsigned(tr_addr_i);
-
   -- Select one of the Block RAMs' output
   -- ('0' => blk_mem_app_0/1, '1' => blk_mem_data_0/1)
-  mux_ctrl_proc : process(bram_idx_input) is
+  mux_ctrl_proc : process(tr_addr) is
   begin
-    if addr_array_lo <= bram_idx_input and bram_idx_input <= addr_array_hi then
+    if addr_array_lo <= tr_addr and tr_addr <= addr_array_hi then
       appdata_mux_ctrl <= '1';
     else
       appdata_mux_ctrl <= '0';
@@ -109,13 +108,13 @@ begin
     if rising_edge(clk) then
       -- Only update the addresses if this is a write request.
       if tr_wea_i(0) = '1' then
-        if bram_idx_input = ADDR_INPUT_ARRAY_LO then
+        if tr_addr = ADDR_INPUT_ARRAY_LO then
           addr_array_lo <=
             unsigned(tr_data_i(addr_array_lo'high downto addr_array_lo'low));
-        elsif bram_idx_input = ADDR_INPUT_ARRAY_HI then
+        elsif tr_addr = ADDR_INPUT_ARRAY_HI then
           addr_array_hi <=
             unsigned(tr_data_i(addr_array_hi'high downto addr_array_hi'low));
-        elsif bram_idx_input = ADDR_ARRAY_SIZE then
+        elsif tr_addr = ADDR_ARRAY_SIZE then
           array_size <=
             unsigned(tr_data_i(array_size'high downto array_size'low));
         end if;
