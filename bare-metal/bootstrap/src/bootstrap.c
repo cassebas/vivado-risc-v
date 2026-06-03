@@ -114,29 +114,12 @@ int main(void)
   kprintf("BOOTSTRAP: received %d bytes, ", total);
   kprintf("which have been written to BlockRAM.\n");
   if (DEBUG) {
-    end = start + cnt / 4;
-    kprintf("BOOTSTRAP: cnt = %d, loop = %d, start = %d.\n", cnt, loop, start);
-    for (int i = 0; i < 32; i += 4) {
+    kprintf("------------------------------\n");
+    for (int i = 0; i < nbytes/4; i++) {
       print_hex(application_elf_mmio[i], 8);
-      kprintf(" ");
-      print_hex(application_elf_mmio[i+1], 8);
-      kprintf(" ");
-      print_hex(application_elf_mmio[i+2], 8);
-      kprintf(" ");
-      print_hex(application_elf_mmio[i+3], 8);
       kprintf("\n");
     }
     kprintf("------------------------------\n");
-    for (int i = start-32; i < end; i += 4) {
-      print_hex(application_elf_mmio[i], 8);
-      kprintf(" ");
-      print_hex(application_elf_mmio[i+1], 8);
-      kprintf(" ");
-      print_hex(application_elf_mmio[i+2], 8);
-      kprintf(" ");
-      print_hex(application_elf_mmio[i+3], 8);
-      kprintf("\n");
-    }
   }
 
   kprintf("BOOTSTRAP: initiate final sync with host..");
