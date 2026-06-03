@@ -23,12 +23,12 @@
 #define BOOTSTRAP_CONF_BYTECNT  24
 #define BOOTSTRAP_CONF_PARAMCNT 6
 // Indices of the configuration parameters, using integer pointer arithmetic
-#define APPLICATION_BOOTCNT     0
-#define APPLICATION_BOOTCNT_MAX 1
-#define APPLICATION_ELF_SIZE    2
-#define INPUT_ARRAY_START       3
-#define INPUT_ARRAY_END         4
-#define INPUT_ARRAY_SIZE        5
+#define APPLICATION_BOOTCNT     0    // offset 0x0000fc00
+#define APPLICATION_BOOTCNT_MAX 1    // offset 0x0000fc04
+#define APPLICATION_ELF_SIZE    2    // offset 0x0000fc08
+#define INPUT_ARRAY_START       3    // offset 0x0000fc0c
+#define INPUT_ARRAY_END         4    // offset 0x0000fc10
+#define INPUT_ARRAY_SIZE        5    // offset 0x0000fc14
 
 // The benchmark application mmio region
 #define APPLICATION_BASE        0x60080000
