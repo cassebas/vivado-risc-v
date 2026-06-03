@@ -453,10 +453,11 @@ begin
   -- 4 bytes is:
   --  31-24  23-16  15-8  7-0
   --    B3     B2     B1   B0
-  -- |---------data-----------|
+  -- |-BLST---------------BFST-|
+  -- |---------RX-data---------|
   --
-  -- The received bytes are left shifted to their correct position,
-  -- master sends the MSB first.
+  -- The received bytes are right shifted to their correct position,
+  -- master sends the LSB first.
   rcv_tmp_register : process(clk) is
   begin
     if rising_edge(clk) then
@@ -465,11 +466,11 @@ begin
       else
         if axi_lite_r_state = AXI_READ_DATA_BUFFER and axi_rvalid = '1' then
           -- Copy lowest rdata byte into right most byte of rcv_tmp
-          rcv_tmp(rcv_tmp'low+7 downto rcv_tmp'low) <= axi_rdata(7 downto 0);
+          rcv_tmp(rcv_tmp'high downto rcv_tmp'high-7) <= axi_rdata(7 downto 0);
 
-          -- Left shift rcv_tmp 8 bits
+          -- Right shift rcv_tmp 8 bits
           for i in rcv_tmp'high-8 downto rcv_tmp'low loop
-            rcv_tmp(i+8) <= rcv_tmp(i);
+            rcv_tmp(i) <= rcv_tmp(i+8);
           end loop;
         end if;
       end if;
