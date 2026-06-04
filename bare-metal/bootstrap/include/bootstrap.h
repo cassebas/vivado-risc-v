@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define DEBUG 1
+#define DEBUG 0
 
 #define MAX_BUF 1024
 
