@@ -578,7 +578,7 @@ static int download(void) {
 
         asm volatile ("fence.i" ::: "memory");
         asm volatile ("addi sp, sp, -16");
-        asm volatile ("sw   a3, 12(sp)");
+        asm volatile ("sw   ra, 12(sp)");
         asm volatile ("jalr ra, 0(a5)");
         asm volatile ("lw   ra, 12(sp)");
         asm volatile ("addi sp, sp, 16");
