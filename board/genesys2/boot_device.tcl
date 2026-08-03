@@ -145,10 +145,10 @@ endgroup
 startgroup
 connect_bd_net [get_bd_pins IO/boot_device_0/interrupt] [get_bd_pins IO/xlconcat_0/In3]
 endgroup
-startgroup
-create_bd_pin -dir O -from 7 -to 0 IO/led_out
-endgroup
-connect_bd_net [get_bd_pins IO/boot_device_0/led_out] [get_bd_pins IO/led_out]
+# startgroup
+# create_bd_pin -dir O -from 7 -to 0 IO/led_out
+# endgroup
+# connect_bd_net [get_bd_pins IO/boot_device_0/led_out] [get_bd_pins IO/led_out]
 
 startgroup
 create_bd_port -dir O usb_uart_extra_rtsn
@@ -166,8 +166,8 @@ startgroup
 create_bd_port -dir I usb_uart_extra_ctsn
 connect_bd_net [get_bd_ports usb_uart_extra_ctsn] [get_bd_pins IO/usb_uart_extra_ctsn]
 endgroup
-create_bd_port -dir O -from 7 -to 0 led_out
-connect_bd_net [get_bd_ports led_out] [get_bd_pins IO/led_out]
+# create_bd_port -dir O -from 7 -to 0 led_out
+# connect_bd_net [get_bd_ports led_out] [get_bd_pins IO/led_out]
 
 assign_bd_address \
     -offset 0x60050000 \

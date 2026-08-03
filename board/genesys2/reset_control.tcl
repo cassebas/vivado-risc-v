@@ -6,9 +6,9 @@ add_files -norecurse {../../reset_control/reset_control_v1_0.vhd ../../reset_con
 update_compile_order -fileset sources_1
 create_bd_cell -type module -reference reset_control_v1_0 IO/reset_control_v1_0_0
 set_property location {3 954 815} [get_bd_cells IO/reset_control_v1_0_0]
-# create_bd_pin -dir O -from 7 -to 0 IO/led_out
+create_bd_pin -dir O -from 7 -to 0 IO/led_out
 create_bd_pin -dir O IO/cpu_reset_n
-# connect_bd_net [get_bd_pins IO/led_out] [get_bd_pins IO/reset_control_v1_0_0/led_out]
+connect_bd_net [get_bd_pins IO/led_out] [get_bd_pins IO/reset_control_v1_0_0/led_out]
 connect_bd_net [get_bd_pins IO/cpu_reset_n] [get_bd_pins IO/reset_control_v1_0_0/cpu_reset_n]
 startgroup
 set_property CONFIG.NUM_MI {5} [get_bd_cells IO/io_axi_s]
@@ -18,10 +18,10 @@ connect_bd_net [get_bd_pins IO/axi_reset] [get_bd_pins IO/reset_control_v1_0_0/s
 connect_bd_net [get_bd_pins IO/axi_clock] [get_bd_pins IO/reset_control_v1_0_0/s00_axi_aclk]
 assign_bd_address
 set_property offset 0x60040000 [get_bd_addr_segs {RocketChip/IO_AXI4/SEG_reset_control_v1_0_0_reg0}]
-# create_bd_port -dir O -from 7 -to 0 led_out
-# startgroup
-# connect_bd_net [get_bd_ports led_out] [get_bd_pins IO/led_out]
-# endgroup
+create_bd_port -dir O -from 7 -to 0 led_out
+startgroup
+connect_bd_net [get_bd_ports led_out] [get_bd_pins IO/led_out]
+endgroup
 delete_bd_objs [get_bd_nets reset_l]
 startgroup
 create_bd_cell -type ip -vlnv xilinx.com:ip:util_vector_logic:2.0 util_vector_logic_1
