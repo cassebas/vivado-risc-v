@@ -1,7 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-
+use ieee.math_real.ceil;
 
 entity boot_device_datafiller is
   generic (BRAM_WEA_WIDTH  : integer := 4;
@@ -122,7 +122,7 @@ architecture structural of boot_device_datafiller is
   signal axi_rvalid  : std_logic;
   signal axi_rready  : std_logic;
 
-  constant MAX_BLOCKS : integer := BRAM_SIZE / ARRAY_SIZE - 1;
+  constant MAX_BLOCKS : integer := integer(ceil(real(BRAM_SIZE)/real(ARRAY_SIZE))) - 1;
 
   signal reset_count  : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (others => '0');
   signal reset_active : std_logic;
