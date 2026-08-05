@@ -9,8 +9,8 @@ entity boot_device is
            S00_AXI_ADDR_WIDTH : integer := 16;
            S01_AXI_DATA_WIDTH : integer := 32;
            S01_AXI_ADDR_WIDTH : integer := 18;
-           BRAM_SIZE        : integer   := 4096;
-           ARRAY_SIZE       : integer   := 10);
+           BRAM_SIZE          : integer   := 4096;
+           ARRAY_SIZE_DEF     : integer   := 10);
 
   port (cpu_reset_n     : in std_logic;  --  CPU reset, active low
 
@@ -191,6 +191,26 @@ architecture behavior of boot_device is
           S_AXI_rready  : in std_logic);
   end component boot_device_axislave;
 
+  component boot_device_rangeextractor is
+    generic (BRAM_DATA_WIDTH  : integer;
+             BRAM0_ADDR_WIDTH : integer;
+             BRAM1_ADDR_WIDTH : integer;
+             BRAM_WEA_WIDTH   : integer);
+
+    port (clk           : in std_logic;
+          rst_n         : in std_logic;
+          cpu_reset_n   : in std_logic;
+          rng_wea_i     : in std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+          rng_addr_i    : in std_logic_vector(BRAM0_ADDR_WIDTH-1 downto 0);
+          rng_data_i    : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+          rng_wea_o     : out std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+          rng_addr_o    : out std_logic_vector(BRAM0_ADDR_WIDTH-1 downto 0);
+          rng_data_o    : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+          array_start_o : out std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0);
+          array_end_o   : out std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0);
+          array_size_o  : out std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0));
+  end component;
+
   component boot_device_addrtranslator is
     generic (BRAM_DATA_WIDTH : integer;
              BRAM_ADDR_WIDTH : integer;
@@ -210,7 +230,10 @@ architecture behavior of boot_device is
           tr_input_addr_o      : out std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
           tr_input_data_o      : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
           appdata_mux_ctrl_o   : out std_logic;
-          inputdata_mux_ctrl_o : out std_logic);
+          inputdata_mux_ctrl_o : out std_logic;
+          array_start_i        : in std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+          array_end_i          : in std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+          array_size_i         : in std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0));
   end component;
 
   component boot_device_datafiller is
@@ -218,7 +241,7 @@ architecture behavior of boot_device is
              BRAM_ADDR_WIDTH : integer;
              BRAM_WEA_WIDTH  : integer;
              BRAM_SIZE       : integer;
-             ARRAY_SIZE      : integer);
+             ARRAY_SIZE_DEF  : integer);
 
     port (clk             : in std_logic;
           rst_n           : in std_logic;
@@ -267,11 +290,17 @@ architecture behavior of boot_device is
   end component;
 
   -- These are the signals coming out of the first boot_device_axislave
-  -- component, requesting data from a certain address.
-  signal wea_app0        : std_logic_vector(BRAM0_WEA_WIDTH-1 downto 0);
-  signal addr_app0       : std_logic_vector(BRAM0_ADDR_WIDTH-1 downto 0);
-  signal data_write_app0 : std_logic_vector(BRAM0_DATA_WIDTH-1 downto 0);
-  signal data_read_app0  : std_logic_vector(BRAM0_DATA_WIDTH-1 downto 0);
+  -- component, requesting data from a certain address. They go into the
+  -- rangeextractor
+  signal wea_app0_1        : std_logic_vector(BRAM0_WEA_WIDTH-1 downto 0);
+  signal addr_app0_1       : std_logic_vector(BRAM0_ADDR_WIDTH-1 downto 0);
+  signal data_write_app0_1 : std_logic_vector(BRAM0_DATA_WIDTH-1 downto 0);
+  -- These signals come out of the rangeextractor, and go to the first block ram
+  signal wea_app0_2        : std_logic_vector(BRAM0_WEA_WIDTH-1 downto 0);
+  signal addr_app0_2       : std_logic_vector(BRAM0_ADDR_WIDTH-1 downto 0);
+  signal data_write_app0_2 : std_logic_vector(BRAM0_DATA_WIDTH-1 downto 0);
+  -- This signal comes out of the first block ram
+  signal data_read_app0    : std_logic_vector(BRAM0_DATA_WIDTH-1 downto 0);
 
   -- These are the signals coming out of the second boot_device_axislave
   -- component, requesting data from a certain address.
@@ -293,9 +322,9 @@ architecture behavior of boot_device is
 
   -- These signals come out of the boot_device_addr_datafiller,
   -- they are 'write' addr/data for input data to be written.
-  signal write_wea     : std_logic_vector(BRAM1_WEA_WIDTH-1 downto 0);
-  signal write_addr     : std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0);
-  signal write_data     : std_logic_vector(BRAM1_DATA_WIDTH-1 downto 0);
+  signal write_wea  : std_logic_vector(BRAM1_WEA_WIDTH-1 downto 0);
+  signal write_addr : std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0);
+  signal write_data : std_logic_vector(BRAM1_DATA_WIDTH-1 downto 0);
 
   -- These signals are the output of the muxes that are connected as inputs
   -- to the two input data block RAMs.
@@ -320,6 +349,12 @@ architecture behavior of boot_device is
   -- block RAM containing input data.
   signal inputdata_mux_ctrl : std_logic;
 
+  -- These signals connect the input value array configuration data from
+  -- the rangeextractor to the addrtranslator.
+  signal array_start : std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0);
+  signal array_end   : std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0);
+  signal array_size  : std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0);
+
 begin
 
   boot_device_axislave_app0 : boot_device_axislave
@@ -327,10 +362,10 @@ begin
                  BD_AXISLAVE_ADDR_WIDTH => BRAM0_ADDR_WIDTH,
                  BD_AXISLAVE_WEA_WIDTH  => BRAM0_WEA_WIDTH)
 
-    port map (axislave_addr_o => addr_app0,
+    port map (axislave_addr_o => addr_app0_1,
               axislave_data_i => data_read_app0,
-              axislave_data_o => data_write_app0,
-              axislave_wea_o  => wea_app0,
+              axislave_data_o => data_write_app0_1,
+              axislave_wea_o  => wea_app0_1,
 
               S_AXI_aclk    => s00_axi_aclk,
               S_AXI_aresetn => s00_axi_aresetn,
@@ -387,6 +422,24 @@ begin
               S_AXI_rready  => s01_axi_rready);
 
 
+  boot_dev_rangeextractor_0 : boot_device_rangeextractor
+    generic map (BRAM_DATA_WIDTH => BRAM1_DATA_WIDTH,
+                 BRAM0_ADDR_WIDTH => BRAM0_ADDR_WIDTH,
+                 BRAM1_ADDR_WIDTH => BRAM1_ADDR_WIDTH,
+                 BRAM_WEA_WIDTH  => BRAM1_WEA_WIDTH)
+
+    port map (clk           => S00_AXI_aclk,
+              rst_n         => S00_AXI_aresetn,
+              cpu_reset_n   => cpu_reset_n,
+              rng_wea_i     => wea_app0_1,
+              rng_addr_i    => addr_app0_1,
+              rng_data_i    => data_write_app0_1,
+              rng_wea_o     => wea_app0_2,
+              rng_addr_o    => addr_app0_2,
+              rng_data_o    => data_write_app0_2,
+              array_start_o => array_start,
+              array_end_o   => array_end,
+              array_size_o  => array_size);
 
   boot_dev_addrtranslator_0 : boot_device_addrtranslator
     generic map (BRAM_DATA_WIDTH => BRAM1_DATA_WIDTH,
@@ -407,7 +460,10 @@ begin
               tr_input_addr_o      => read_addr,
               tr_input_data_o      => read_data,
               appdata_mux_ctrl_o   => appdata_mux_ctrl,
-              inputdata_mux_ctrl_o => inputdata_mux_ctrl);
+              inputdata_mux_ctrl_o => inputdata_mux_ctrl,
+              array_start_i        => array_start,
+              array_end_i          => array_end,
+              array_size_i         => array_size);
 
 
   boot_device_datafiller_0 : boot_device_datafiller
@@ -415,28 +471,27 @@ begin
                  BRAM_ADDR_WIDTH => BRAM1_ADDR_WIDTH,
                  BRAM_WEA_WIDTH  => BRAM1_WEA_WIDTH,
                  BRAM_SIZE       => BRAM_SIZE,
-                 ARRAY_SIZE      => ARRAY_SIZE)
+                 ARRAY_SIZE_DEF  => ARRAY_SIZE_DEF)
 
-    port map (
-        clk         => S00_AXI_aclk,
-        rst_n       => S00_AXI_aresetn,
-        cpu_reset_n => cpu_reset_n,
-        -- led_out     => led_out,
-        uart_rx     => rx_i,
-        uart_tx     => tx_o,
-        uart_ctsn   => ctsn_i,
-        uart_rtsn   => rtsn_o,
-        interrupt   => interrupt,
-        fill_wea_o  => write_wea,
-        fill_addr_o => write_addr,
-        fill_data_o => write_data);
+    port map (clk         => S00_AXI_aclk,
+              rst_n       => S00_AXI_aresetn,
+              cpu_reset_n => cpu_reset_n,
+              -- led_out     => led_out,
+              uart_rx     => rx_i,
+              uart_tx     => tx_o,
+              uart_ctsn   => ctsn_i,
+              uart_rtsn   => rtsn_o,
+              interrupt   => interrupt,
+              fill_wea_o  => write_wea,
+              fill_addr_o => write_addr,
+              fill_data_o => write_data);
 
 
   blk_mem_app_0_instance : blk_mem_app_0
     port map (clka  => S00_AXI_aclk,
-              wea   => wea_app0,
-              addra => addr_app0,
-              dina  => data_write_app0,
+              wea   => wea_app0_2,
+              addra => addr_app0_2,
+              dina  => data_write_app0_2,
               douta => data_read_app0);
 
   blk_mem_app_1_instance : blk_mem_app_1

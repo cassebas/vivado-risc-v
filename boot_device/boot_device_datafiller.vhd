@@ -10,7 +10,7 @@ entity boot_device_datafiller is
            UART_ADDR_WIDTH : integer := 16;
            UART_DATA_WIDTH : integer := 32;
            BRAM_SIZE       : integer := 4096;
-           ARRAY_SIZE      : integer := 256);
+           ARRAY_SIZE_DEF  : integer := 256);
 
   port (clk         : in std_logic;
         rst_n       : in std_logic;
@@ -122,7 +122,8 @@ architecture structural of boot_device_datafiller is
   signal axi_rvalid  : std_logic;
   signal axi_rready  : std_logic;
 
-  constant MAX_BLOCKS : integer := integer(ceil(real(BRAM_SIZE)/real(ARRAY_SIZE))) - 1;
+  constant MAX_BLOCKS : integer :=
+    integer(ceil(real(BRAM_SIZE)/real(ARRAY_SIZE_DEF))) - 1;
 
   signal reset_count  : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (others => '0');
   signal reset_active : std_logic;

@@ -99,6 +99,7 @@ launch_runs blk_mem_data_1_synth_1 -jobs 6
 add_files -norecurse { \
                            boot_device/boot_device.vhd \
                            boot_device/boot_device_axislave.vhd \
+                           boot_device/boot_device_rangeextractor.vhd \
                            boot_device/boot_device_addrtranslator.vhd \
                            boot_device/boot_device_datafiller.vhd \
                            boot_device/boot_device_datarcv.vhd \
