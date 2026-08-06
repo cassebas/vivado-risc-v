@@ -30,9 +30,19 @@ architecture structural of boot_device_rangeextractor is
   -- These are addresses of the MMIO (BRAM) addresses where the
   -- ranges are stored of the input values located in the ELF
   -- binary.
-  constant INPUT_ARRAY_START_ADDR : integer := 16#FC0C#;
-  constant INPUT_ARRAY_END_ADDR   : integer := 16#FC10#;
-  constant INPUT_ARRAY_SIZE_ADDR  : integer := 16#FC14#;
+  -- The MMIO addresses of the relevant configuration data are:
+  --  input array start -> 0x6005FC0C
+  --  input array end   -> 0x6005FC10
+  --  input array size  -> 0x6005FC14
+  -- These addresses (byte addressed) are converted to the addresses of the
+  -- blockram (which are words, from 0 to 16383, each address 32-bits wide)
+  -- The requested addresses thus become:
+  --  input array start -> 0x3F03 (0xFC0C / 4)
+  --  input array end   -> 0x3F04 (0xFC10 / 4)
+  --  input array size  -> 0x3F05 (0xFC14 / 4)
+  constant INPUT_ARRAY_START_ADDR : integer := 16#3F03#;
+  constant INPUT_ARRAY_END_ADDR   : integer := 16#3F04#;
+  constant INPUT_ARRAY_SIZE_ADDR  : integer := 16#3F05#;
 
   -- The input address converted to unsigned
   signal rng_addr  : unsigned(BRAM0_ADDR_WIDTH-1 downto 0);
