@@ -127,7 +127,7 @@ architecture structural of boot_device_datafiller is
 
   signal reset_count  : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (others => '0');
   signal reset_active : std_logic;
-  signal logic_rst_n  : std_logic;
+  signal logic_rst_n  : std_logic := '1';
 
 begin
   reset_counter : process(clk) is
