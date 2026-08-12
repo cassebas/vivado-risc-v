@@ -10,7 +10,9 @@ entity reset_control is
         aresetn     : in std_logic;
         cmd_in      : in std_logic_vector(31 downto 0);
         led_out     : out std_logic_vector(7 downto 0);
-        cpu_reset_n : out std_logic);
+        cpu_reset_n : out std_logic;
+        logic_set   : out std_logic;
+        logic_reset : out std_logic);
 end reset_control;
 
 
@@ -29,7 +31,9 @@ architecture behavioral of reset_control is
   signal cmd : std_logic_vector(7 downto 0);
   -- constant CMD_COUNT : std_logic_vector(7 downto 0) := "00000001";
   -- constant CMD_BLINK : std_logic_vector(7 downto 0) := "00000010";
-  constant CMD_RESET : std_logic_vector(7 downto 0) := "11111111";
+  constant CMD_RESET       : std_logic_vector(7 downto 0) := "11111111"; -- 0xFF
+  constant CMD_LOGIC_SET   : std_logic_vector(7 downto 0) := "10011001"; -- 0x99
+  constant CMD_LOGIC_RESET : std_logic_vector(7 downto 0) := "11001100"; -- 0xCC
 
   -- type cmd_state_type is (IDLE, BLINK, COUNT);
   -- signal state, state_n : cmd_state_type;
@@ -43,6 +47,17 @@ architecture behavioral of reset_control is
   constant RST_CLK_PERIODS : natural := 5;
   -- Number of clock periods the reset signal is to be inhibited
   constant RST_CLK_INHIBIT : natural := 20 - RST_CLK_PERIODS;
+
+  -- Number of clock periods the logic set signal is asserted
+  constant LOGIC_SET_CLK_PERIODS : natural := 2;
+  -- Number of clock periods the logic set signal is to be inhibited
+  constant LOGIC_SET_CLK_INHIBIT : natural := 10 - LOGIC_SET_CLK_PERIODS;
+
+  -- Number of clock periods the logic rst signal is asserted
+  constant LOGIC_RST_CLK_PERIODS : natural := 2;
+  -- Number of clock periods the logic rst signal is to be inhibited
+  constant LOGIC_RST_CLK_INHIBIT : natural := 10 - LOGIC_RST_CLK_PERIODS;
+
 
 begin
   -- led_cnt_proc: process(clk) is
@@ -111,6 +126,58 @@ begin
       end if;
     end if;
   end process reset_ctrl;
+
+  logic_set_ctrl : process(clk) is
+    variable logic_set_periods : natural;
+    variable logic_set_inhibit : natural;
+  begin
+    if rising_edge(clk) then
+      if aresetn = '0' then
+        logic_set <= '0';
+        logic_set_periods := 0;
+        logic_set_inhibit := 0;
+      else
+        if logic_set_periods > 0 then
+          logic_set_periods := logic_set_periods - 1;
+          logic_set <= '1';
+        elsif logic_set_inhibit > 0 then
+          logic_set_inhibit := logic_set_inhibit - 1;
+          logic_set <= '0';
+        elsif cmd = CMD_LOGIC_SET then
+          -- Reset logic set
+          logic_set_periods := LOGIC_SET_CLK_PERIODS-1;
+          logic_set_inhibit := LOGIC_SET_CLK_INHIBIT-1;
+          logic_set <= '1';
+        end if;
+      end if;
+    end if;
+  end process logic_set_ctrl;
+
+  logic_reset_ctrl : process(clk) is
+    variable logic_rst_periods : natural;
+    variable logic_rst_inhibit : natural;
+  begin
+    if rising_edge(clk) then
+      if aresetn = '0' then
+        logic_reset <= '0';
+        logic_rst_periods := 0;
+        logic_rst_inhibit := 0;
+      else
+        if logic_rst_periods > 0 then
+          logic_rst_periods := logic_rst_periods - 1;
+          logic_reset <= '1';
+        elsif logic_rst_inhibit > 0 then
+          logic_rst_inhibit := logic_rst_inhibit - 1;
+          logic_reset <= '0';
+        elsif cmd = CMD_LOGIC_RESET then
+          -- Reset logic set
+          logic_rst_periods := LOGIC_RST_CLK_PERIODS-1;
+          logic_rst_inhibit := LOGIC_RST_CLK_INHIBIT-1;
+          logic_reset <= '1';
+        end if;
+      end if;
+    end if;
+  end process logic_reset_ctrl;
 
   read_cmd: process(clk) is
   begin

@@ -17,7 +17,9 @@ entity reset_control_v1_0_S00_AXI is
 	port (
 		-- Users to add ports here
         led_out     : out std_logic_vector(7 downto 0);
-        cpu_reset_n   : out std_logic;
+        cpu_reset_n : out std_logic;
+        logic_set   : out std_logic;
+        logic_reset : out std_logic;
 		-- User ports ends
 		-- Do not modify the ports beyond this line
 
@@ -123,8 +125,10 @@ architecture arch_imp of reset_control_v1_0_S00_AXI is
       port (clk         : in std_logic;
             aresetn     : in std_logic;
             cmd_in      : in std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
-            led_out   : out std_logic_vector(7 downto 0);
-            cpu_reset_n : out std_logic);
+            led_out     : out std_logic_vector(7 downto 0);
+            cpu_reset_n : out std_logic;
+            logic_set   : out std_logic;
+            logic_reset : out std_logic);
     end component;
 
 begin
@@ -398,8 +402,10 @@ begin
       port map (clk         => S_AXI_ACLK,
                 aresetn     => S_AXI_ARESETN,
                 cmd_in      => slv_reg0(31 downto 0),
-                led_out   => led_out,
-                cpu_reset_n => cpu_reset_n);
+                led_out     => led_out,
+                cpu_reset_n => cpu_reset_n,
+                logic_set   => logic_set,
+                logic_reset => logic_reset);
 	-- User logic ends
 
 end arch_imp;

@@ -139,6 +139,8 @@ extern unsigned char _fbss[];
 extern unsigned char _ebss[];
 
 static void reset_cpu(void);
+static void logic_set(void);
+static void logic_reset(void);
 
 static const char * errno_to_str(void) {
     switch (errno) {
@@ -603,29 +605,33 @@ int main(void) {
     uint32_t *application_base = (uint32_t *) APPLICATION_BASE;
 
     uint32_t *bootstrap_config = (uint32_t *) BOOTSTRAP_CONF_ADDR;
-    volatile uint32_t boot_num = bootstrap_config[APPLICATION_BOOTCNT];
+    volatile uint32_t app_cnt = bootstrap_config[APPLICATION_CNT];
+    volatile uint32_t app_max = bootstrap_config[APPLICATION_CNT_MAX];
+    volatile uint32_t boot_cnt = bootstrap_config[APPLICATION_BOOTCNT];
     volatile uint32_t boot_max = bootstrap_config[APPLICATION_BOOTCNT_MAX];
 
-    kprintf("BOOTROM: [bootnum=%d] ", boot_num);
-    if (!boot_num) {
+    kprintf("BOOTROM: [app_cnt=%d, boot_cnt=%d] ", app_cnt, boot_cnt);
+    if (!boot_cnt) {
       // First time boot!
       kprintf("FIRST BOOT - running bootstrap application\n");
 
       // Set the start address of the application to bootstrap
       set_blockram_address(bootstrap_base);
-    } else if (boot_num > boot_max) {
-      kprintf("Maximum number of boots reached. Running bootstrap.\n");
-
-      // Set the start address of the application to bootstrap
-      set_blockram_address(bootstrap_base);
+    } else if (boot_cnt > boot_max) {
+      if (app_cnt < app_max) {
+        kprintf("Maximum number of boots reached. Running bootstrap again.\n");
+        // Set the start address of the application to bootstrap
+        set_blockram_address(bootstrap_base);
+      } else {
+        // End of experiments, this was the final application to run
+        kprintf("Maximum number of boots reached. End of experiment.\n");
+        set_blockram_address(0);
+      }
     } else {
       kprintf("Running benchmark application.\n");
 
       // Set the start address of the application to the application
       set_blockram_address(application_base);
-
-      // Increase boot number by 1, for the next boot
-      bootstrap_config[APPLICATION_BOOTCNT]++;
     }
 
     for (;;) {
@@ -638,6 +644,29 @@ int main(void) {
             if (download() != 0) {
                 kprintf("Cannot read BOOT.ELF: %s\n", errno_to_str());
             } else {
+              // Done running either bootstrap or application
+
+              // Restore boot_cnt/boot_max, they may have been overwritten
+              // because of the jump to another memory segment
+              boot_cnt = bootstrap_config[APPLICATION_BOOTCNT];
+              boot_max = bootstrap_config[APPLICATION_BOOTCNT_MAX];
+
+              if (boot_cnt == 0 || boot_cnt > boot_max) {
+                bootstrap_config[APPLICATION_CNT]++;
+                bootstrap_config[APPLICATION_BOOTCNT]++;
+                // Issue a logic set
+                kprintf("BOOTROM: issuing logic set.\n");
+                logic_set();
+              } else {
+                // Increase boot number by 1, for the next boot
+                bootstrap_config[APPLICATION_BOOTCNT]++;
+                if (boot_cnt > boot_max) {
+                  // Issue a logic reset
+                  kprintf("BOOTROM: issuing logic reset.\n");
+                  logic_reset();
+                }
+              }
+
               // The application has returned from its main function
               kprintf("BOOTROM: resetting the CPU.\n");
 
@@ -668,4 +697,24 @@ static void reset_cpu(void)
     usleep(100000);
     kprintf(".");
   }
+}
+
+static void logic_set(void)
+{
+  volatile uint32_t *reset_ctrl_reg = (uint32_t *) RESET_CTRL_BASE;
+
+  *reset_ctrl_reg = 0xffffff99;
+
+  // Wait a bit...
+  usleep(100000);
+}
+
+static void logic_reset(void)
+{
+  volatile uint32_t *reset_ctrl_reg = (uint32_t *) RESET_CTRL_BASE;
+
+  *reset_ctrl_reg = 0xffffffcc;
+
+  // Wait a bit...
+  usleep(100000);
 }

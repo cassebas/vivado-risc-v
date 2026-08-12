@@ -61,7 +61,11 @@ int main(void)
   }
 
   // Print the received parameters to stdout
-  kprintf("BOOTSTRAP: application boot counter = 0x");
+  kprintf("BOOTSTRAP: application counter = 0x");
+  print_hex(bootstrap_cfg_mmio[APPLICATION_CNT], 8);
+  kprintf("\nBOOTSTRAP: application counter max = 0x");
+  print_hex(bootstrap_cfg_mmio[APPLICATION_CNT_MAX], 8);
+  kprintf("\nBOOTSTRAP: application boot counter = 0x");
   print_hex(bootstrap_cfg_mmio[APPLICATION_BOOTCNT], 8);
   kprintf("\nBOOTSTRAP: application boot counter max = 0x");
   print_hex(bootstrap_cfg_mmio[APPLICATION_BOOTCNT_MAX], 8);
@@ -84,7 +88,7 @@ int main(void)
   kprintf("BOOTSTRAP: start receiving %d bytes of the ELF binary.\n", nbytes);
 
   volatile uint32_t *application_elf_mmio = (uint32_t *) APPLICATION_BASE;
-  int total = 0, loop = 0, start, end;
+  int total = 0, loop = 0, start;
   cnt = 0;
   while (total < nbytes) {
     if (kdata_ready()) {

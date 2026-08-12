@@ -9,19 +9,19 @@ entity boot_device_rangeextractor is
            BRAM1_ADDR_WIDTH : integer := 16;
            BRAM_WEA_WIDTH  : integer := 4);
 
-  port (clk           : in std_logic;
-        rst_n         : in std_logic;
-        cpu_reset_n   : in std_logic;
-        rng_wea_i     : in std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
-        rng_addr_i    : in std_logic_vector(BRAM0_ADDR_WIDTH-1 downto 0);
-        rng_data_i    : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
-        rng_wea_o     : out std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
-        rng_addr_o    : out std_logic_vector(BRAM0_ADDR_WIDTH-1 downto 0);
-        rng_data_o    : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+  port (clk            : in std_logic;
+        rst_n          : in std_logic;
+        cpu_reset_n    : in std_logic;
+        rng_wea_i      : in std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+        rng_addr_i     : in std_logic_vector(BRAM0_ADDR_WIDTH-1 downto 0);
+        rng_data_i     : in std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
+        rng_wea_o      : out std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+        rng_addr_o     : out std_logic_vector(BRAM0_ADDR_WIDTH-1 downto 0);
+        rng_data_o     : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
         -- These outputs go to the addrtranslator, they are dynamically set
-        array_start_o : out std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0);
-        array_end_o   : out std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0);
-        array_size_o  : out std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0));
+        array_start_o  : out std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0);
+        array_end_o    : out std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0);
+        array_size_o   : out std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0));
 end entity boot_device_rangeextractor;
 
 
@@ -31,30 +31,28 @@ architecture structural of boot_device_rangeextractor is
   -- ranges are stored of the input values located in the ELF
   -- binary.
   -- The MMIO addresses of the relevant configuration data are:
-  --  input array start -> 0x6005FC0C
-  --  input array end   -> 0x6005FC10
-  --  input array size  -> 0x6005FC14
+  --    (with base address 0x6005_0000)
+  --  input array start -> 0x6005_FC14
+  --  input array end   -> 0x6005_FC18
+  --  input array size  -> 0x6005_FC1C
   -- These addresses (byte addressed) are converted to the addresses of the
-  -- blockram (which are words, from 0 to 16383, each address 32-bits wide)
+  -- blockram (which are words, from 0 to 0x3FFF, each address 32-bits wide)
   -- The requested addresses thus become:
-  --  input array start -> 0x3F03 (0xFC0C / 4)
-  --  input array end   -> 0x3F04 (0xFC10 / 4)
-  --  input array size  -> 0x3F05 (0xFC14 / 4)
-  constant INPUT_ARRAY_START_ADDR : integer := 16#3F03#;
-  constant INPUT_ARRAY_END_ADDR   : integer := 16#3F04#;
-  constant INPUT_ARRAY_SIZE_ADDR  : integer := 16#3F05#;
+  --  input array start -> 0x3F05 (0xFC14 / 4)
+  --  input array end   -> 0x3F06 (0xFC18 / 4)
+  --  input array size  -> 0x3F07 (0xFC1C / 4)
+  constant INPUT_ARRAY_START_ADDR : integer := 16#3F05#;
+  constant INPUT_ARRAY_END_ADDR   : integer := 16#3F06#;
+  constant INPUT_ARRAY_SIZE_ADDR  : integer := 16#3F07#;
 
   -- The input address converted to unsigned
   signal rng_addr  : unsigned(BRAM0_ADDR_WIDTH-1 downto 0);
 
   -- These signals will be filled with the values that are put in the configuration
-  -- section of the BRAM dynamically at runtime. (Located at offset 0x0000fc00).
-  --
-  -- The initial values of the signals are high, such that they will not
-  -- interfere with downloading the ELF binary at lower addresses.
-  signal array_start : std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0) := (others => '1');
-  signal array_end   : std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0) := (others => '1');
-  signal array_size  : std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0) := (others => '0');
+  -- section of the BRAM dynamically at runtime. (Located at offset 0x6005_fc00).
+  signal array_start : std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0);
+  signal array_end   : std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0);
+  signal array_size  : std_logic_vector(BRAM1_ADDR_WIDTH-1 downto 0);
 
 begin
 

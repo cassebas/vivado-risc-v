@@ -20,15 +20,17 @@
 // parameter contains an unsigned integer of 4 bytes.
 #define BOOTSTRAP_CONF_OFFSET   0x0000fc00
 #define BOOTSTRAP_CONF_ADDR     (BOOTSTRAP_BASE + BOOTSTRAP_CONF_OFFSET)
-#define BOOTSTRAP_CONF_BYTECNT  24
-#define BOOTSTRAP_CONF_PARAMCNT 6
+#define BOOTSTRAP_CONF_BYTECNT  32
+#define BOOTSTRAP_CONF_PARAMCNT 8
 // Indices of the configuration parameters, using integer pointer arithmetic
-#define APPLICATION_BOOTCNT     0    // offset 0x0000fc00
-#define APPLICATION_BOOTCNT_MAX 1    // offset 0x0000fc04
-#define APPLICATION_ELF_SIZE    2    // offset 0x0000fc08
-#define INPUT_ARRAY_START       3    // offset 0x0000fc0c
-#define INPUT_ARRAY_END         4    // offset 0x0000fc10
-#define INPUT_ARRAY_SIZE        5    // offset 0x0000fc14
+#define APPLICATION_CNT         0    // offset 0x0000fc00
+#define APPLICATION_CNT_MAX     1    // offset 0x0000fc04
+#define APPLICATION_BOOTCNT     2    // offset 0x0000fc08
+#define APPLICATION_BOOTCNT_MAX 3    // offset 0x0000fc0c
+#define APPLICATION_ELF_SIZE    4    // offset 0x0000fc10
+#define INPUT_ARRAY_START       5    // offset 0x0000fc14
+#define INPUT_ARRAY_END         6    // offset 0x0000fc18
+#define INPUT_ARRAY_SIZE        7    // offset 0x0000fc1c
 
 // The benchmark application mmio region
 #define APPLICATION_BASE        0x60080000

@@ -17,7 +17,9 @@ entity reset_control_v1_0 is
 	port (
 		-- Users to add ports here
         led_out     : out std_logic_vector(7 downto 0);
-        cpu_reset_n     : out std_logic;
+        cpu_reset_n : out std_logic;
+        logic_set   : out std_logic;
+        logic_reset : out std_logic;
 		-- User ports ends
 		-- Do not modify the ports beyond this line
 
@@ -57,7 +59,9 @@ architecture arch_imp of reset_control_v1_0 is
 		);
 		port (
         led_out     : out std_logic_vector(7 downto 0);
-        cpu_reset_n     : out std_logic;
+        cpu_reset_n : out std_logic;
+        logic_set   : out std_logic;
+        logic_reset : out std_logic;
 
 		S_AXI_ACLK	: in std_logic;
 		S_AXI_ARESETN	: in std_logic;
@@ -95,6 +99,8 @@ reset_control_v1_0_S00_AXI_inst : reset_control_v1_0_S00_AXI
         -- User ports
         led_out         => led_out,
         cpu_reset_n     => cpu_reset_n,
+        logic_set       => logic_set,
+        logic_reset     => logic_reset,
         -- Generated ports
 		S_AXI_ACLK	=> s00_axi_aclk,
 		S_AXI_ARESETN	=> s00_axi_aresetn,

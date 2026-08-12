@@ -126,6 +126,8 @@ connect_bd_net [get_bd_pins IO/axi_reset] [get_bd_pins IO/boot_device_0/S00_AXI_
 connect_bd_net [get_bd_pins IO/axi_clock] [get_bd_pins IO/boot_device_0/S01_AXI_aclk]
 connect_bd_net [get_bd_pins IO/axi_reset] [get_bd_pins IO/boot_device_0/S01_AXI_aresetn]
 connect_bd_net [get_bd_pins IO/reset_control_v1_0_0/cpu_reset_n] [get_bd_pins IO/boot_device_0/cpu_reset_n]
+connect_bd_net [get_bd_pins IO/reset_control_v1_0_0/logic_set] [get_bd_pins IO/boot_device_0/logic_set_ev_i]
+connect_bd_net [get_bd_pins IO/reset_control_v1_0_0/logic_reset] [get_bd_pins IO/boot_device_0/logic_rst_ev_i]
 
 startgroup
 create_bd_pin -dir O IO/usb_uart_extra_rtsn

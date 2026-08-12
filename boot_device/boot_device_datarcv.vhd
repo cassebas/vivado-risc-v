@@ -3,21 +3,21 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity boot_device_datarcv is
-  generic (BRAM_WEA_WIDTH  : integer := 4;
-           BRAM_ADDR_WIDTH : integer := 16;
-           BRAM_DATA_WIDTH : integer := 32;
-           UART_ADDR_WIDTH : integer := 16;
-           UART_DATA_WIDTH : integer := 32;
-           BRAM_SIZE       : integer := 4096);
+  generic (BRAM_WEA_WIDTH   : integer := 4;
+           BRAM_ADDR_WIDTH  : integer := 16;
+           BRAM_DATA_WIDTH  : integer := 32;
+           UART_ADDR_WIDTH  : integer := 16;
+           UART_DATA_WIDTH  : integer := 32);
 
   port (clk           : in std_logic;
         rst_n         : in std_logic;
 
-        -- This signal indicates the start of a new sequence of
-        -- repetitions, where the two BlockRAMs are swapped. This
-        -- means that this component should first send the
-        -- "START" command to the host computer.
-        -- The cpu_reset_n signal is active *low*
+        -- Below signal indicates the start of a new sequence of
+        -- repetitions, where the two BlockRAMs are swapped. At this moment
+        -- in time, this component will send a 'data request' command to the
+        -- host computer. This request is encoded as "Z*" (2 bytes).
+        --
+        -- The logic_rst signal is active *low*
         logic_rst_n   : in std_logic;
 
         -- LEDs (debug)
@@ -77,8 +77,6 @@ architecture behavior of boot_device_datarcv is
   signal fill_data : std_logic_vector(BRAM_DATA_WIDTH-1 downto 0);
   signal load_data : std_logic;
   signal next_addr : std_logic;
-
-  constant MAX_ADDR : integer := BRAM_SIZE - 1;
 
   constant B0   : unsigned(1 downto 0) := "00";
   constant B1   : unsigned(1 downto 0) := "01";
@@ -527,17 +525,7 @@ begin
     end if;
   end process fill_data_proc;
 
-
-  compute_next_address : process(fill_addr) is
-    variable this_address : unsigned(BRAM_ADDR_WIDTH-1 downto 0);
-  begin
-    this_address := unsigned(fill_addr);
-    if this_address >= MAX_ADDR then
-      fill_addr_next <= (others => '0');
-    else
-      fill_addr_next <= std_logic_vector(this_address + 1);
-    end if;
-  end process compute_next_address;
+  fill_addr_next <= std_logic_vector(unsigned(fill_addr) + 1);
 
 
   snd_data_proc : process(clk) is

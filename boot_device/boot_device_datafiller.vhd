@@ -4,30 +4,32 @@ use ieee.numeric_std.all;
 use ieee.math_real.ceil;
 
 entity boot_device_datafiller is
-  generic (BRAM_WEA_WIDTH  : integer := 4;
-           BRAM_ADDR_WIDTH : integer := 16;
-           BRAM_DATA_WIDTH : integer := 32;
-           UART_ADDR_WIDTH : integer := 16;
-           UART_DATA_WIDTH : integer := 32;
-           BRAM_SIZE       : integer := 4096;
-           ARRAY_SIZE_DEF  : integer := 256);
+  generic (BRAM_WEA_WIDTH   : integer := 4;
+           BRAM_ADDR_WIDTH  : integer := 16;
+           BRAM_DATA_WIDTH  : integer := 32;
+           ARRAYS_PER_BLOCK : integer := 16);
 
-  port (clk         : in std_logic;
-        rst_n       : in std_logic;
-        cpu_reset_n : in std_logic;
-        led_out     : out std_logic_vector(7 downto 0);
-        uart_rx     : in std_logic;
-        uart_tx     : out std_logic;
-        uart_ctsn   : in std_logic;
-        uart_rtsn   : out std_logic;
-        interrupt   : out std_logic;
-        fill_wea_o  : out std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
-        fill_addr_o : out std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
-        fill_data_o : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0));
+  port (clk            : in std_logic;
+        rst_n          : in std_logic;
+        cpu_reset_n    : in std_logic;
+        logic_set_ev_i : in std_logic;
+        logic_rst_ev_i : in std_logic;
+        led_out        : out std_logic_vector(7 downto 0);
+        uart_rx        : in std_logic;
+        uart_tx        : out std_logic;
+        uart_ctsn      : in std_logic;
+        uart_rtsn      : out std_logic;
+        interrupt      : out std_logic;
+        fill_wea_o     : out std_logic_vector(BRAM_WEA_WIDTH-1 downto 0);
+        fill_addr_o    : out std_logic_vector(BRAM_ADDR_WIDTH-1 downto 0);
+        fill_data_o    : out std_logic_vector(BRAM_DATA_WIDTH-1 downto 0));
 end entity boot_device_datafiller;
 
 
 architecture structural of boot_device_datafiller is
+
+  constant UART_ADDR_WIDTH : integer := 16;
+  constant UART_DATA_WIDTH : integer := 32;
 
   component uart is
     port (async_resetn  : in std_logic;
@@ -60,15 +62,21 @@ architecture structural of boot_device_datafiller is
     end component uart;
 
   component boot_device_datarcv is
-    generic (BRAM_SIZE : integer);
+    generic (BRAM_WEA_WIDTH   : integer;
+             BRAM_ADDR_WIDTH  : integer;
+             BRAM_DATA_WIDTH  : integer;
+             UART_ADDR_WIDTH  : integer;
+             UART_DATA_WIDTH  : integer);
 
     port (clk           : in std_logic;
           rst_n         : in std_logic;
 
-          -- This signal indicates the start of a new sequence of
-          -- repetitions, where the two BlockRAMs are swapped. This
-          -- means that this component should first send the
-          -- "START" command to the host computer.
+          -- Below signal indicates the start of a new sequence of
+          -- repetitions, where the two BlockRAMs are swapped. At this moment
+          -- in time, this component will send a 'data request' command to the
+          -- host computer. This request is encoded as "Z*" (2 bytes).
+          --
+          -- The logic_rst_n signal is active *low*
           logic_rst_n   : in std_logic;
 
           -- LEDs (debug)
@@ -122,36 +130,52 @@ architecture structural of boot_device_datafiller is
   signal axi_rvalid  : std_logic;
   signal axi_rready  : std_logic;
 
-  constant MAX_BLOCKS : integer :=
-    integer(ceil(real(BRAM_SIZE)/real(ARRAY_SIZE_DEF))) - 1;
+  -- constant MAX_BLOCKS : integer :=
+  --   integer(ceil(real(BRAM_SIZE)/real(ARRAY_SIZE_DEF))) - 1;
 
   signal reset_count  : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (others => '0');
   signal reset_active : std_logic;
   signal logic_rst_n  : std_logic := '1';
 
+  signal logic_set    : std_logic := '0';
+
 begin
-  reset_counter : process(clk) is
+  set_reset_logic_set : process(clk) is
+  begin
+    if rising_edge(clk) then
+      if logic_set_ev_i = '1' then
+        logic_set <= '1';
+      elsif logic_rst_ev_i = '1' then
+        logic_set <= '0';
+      end if;
+    end if;
+  end process set_reset_logic_set;
+
+
+  logic_reset_ctrl : process(clk) is
   begin
     if rising_edge(clk) then
       logic_rst_n <= '1';
 
       -- Reset from the reset control component? (cpu_reset_n is active *low*)
       if cpu_reset_n = '0' then
-        -- Only increase offset upon a *new* reset event
-        if reset_active = '0' then
-          if reset_count = MAX_BLOCKS then
-            logic_rst_n <= '0';
-            reset_count <= (others => '0');
-          else
-            reset_count <= reset_count + 1;
+        if logic_set = '1' then
+          if reset_active = '0' then
+            -- Only set/reset logic_set upon a *new* reset event
+            if reset_count < ARRAYS_PER_BLOCK then
+              reset_count <= reset_count + 1;
+            else
+              logic_rst_n <= '0';
+              reset_count <= (others => '0');
+            end if;
+            reset_active <= '1';
           end if;
-          reset_active <= '1';
         end if;
       else
         reset_active <= '0';
       end if;
     end if;
-  end process reset_counter;
+  end process logic_reset_ctrl;
 
 
   uart_0 : uart
@@ -181,7 +205,11 @@ begin
 
 
   boot_device_datarcv_0 : boot_device_datarcv
-    generic map (BRAM_SIZE => BRAM_SIZE)
+    generic map (BRAM_WEA_WIDTH   => BRAM_WEA_WIDTH,
+                 BRAM_ADDR_WIDTH  => BRAM_ADDR_WIDTH,
+                 BRAM_DATA_WIDTH  => BRAM_DATA_WIDTH,
+                 UART_ADDR_WIDTH  => UART_ADDR_WIDTH,
+                 UART_DATA_WIDTH  => UART_DATA_WIDTH)
 
     port map (clk           => clk,
               rst_n         => rst_n,
