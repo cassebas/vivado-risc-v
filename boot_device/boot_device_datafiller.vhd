@@ -155,7 +155,12 @@ begin
   logic_reset_ctrl : process(clk) is
   begin
     if rising_edge(clk) then
-      logic_rst_n <= '1';
+
+      if logic_set_ev_i = '1' then
+        logic_rst_n <= '0';
+      else
+        logic_rst_n <= '1';
+      end if;
 
       -- Reset from the reset control component? (cpu_reset_n is active *low*)
       if cpu_reset_n = '0' then

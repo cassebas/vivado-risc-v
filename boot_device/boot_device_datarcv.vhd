@@ -145,7 +145,7 @@ architecture behavior of boot_device_datarcv is
   constant AXI_WRITE_CTRL_ADDR : std_logic_vector(UART_ADDR_WIDTH-1 downto 0) :=
     (3 => '1', 2 => '1', others => '0');
 
-  signal snd_data_active : std_logic;
+  signal snd_data_active : std_logic := '0';
 
 begin
   statemachine_register : process(clk) is

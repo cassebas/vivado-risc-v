@@ -535,17 +535,19 @@ begin
   begin
     if inputdata_mux_ctrl = '0' then
       input_wea1  <= read_wea;
-      input_wea2  <= write_wea;
       input_addr1 <= read_addr;
-      input_addr2 <= write_addr;
       input_data1 <= read_data;
+
+      input_wea2  <= write_wea;
+      input_addr2 <= write_addr;
       input_data2 <= write_data;
     else
       input_wea1  <= write_wea;
-      input_wea2  <= read_wea;
       input_addr1 <= write_addr;
-      input_addr2 <= read_addr;
       input_data1 <= write_data;
+
+      input_wea2  <= read_wea;
+      input_addr2 <= read_addr;
       input_data2 <= read_data;
     end if;
   end process inputdata_bram_muxes;

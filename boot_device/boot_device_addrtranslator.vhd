@@ -82,6 +82,7 @@ begin
     if rising_edge(clk) then
       if logic_set_ev_i = '1' then
         reset_cnt <= (others => '0');
+        inputdata_mux_ctrl <= not inputdata_mux_ctrl;
       elsif cpu_reset_n = '0' then
         -- Only increase offset upon a *new* reset event
         if reset_active = '0' then
