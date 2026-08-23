@@ -606,8 +606,9 @@ int main(void) {
 
     uint32_t *bootstrap_config = (uint32_t *) BOOTSTRAP_CONF_ADDR;
     volatile uint32_t app_cnt = bootstrap_config[APPLICATION_CNT];
-    volatile uint32_t app_max = bootstrap_config[APPLICATION_CNT_MAX];
     volatile uint32_t boot_cnt = bootstrap_config[APPLICATION_BOOTCNT];
+
+    volatile uint32_t app_max = bootstrap_config[APPLICATION_CNT_MAX];
     volatile uint32_t boot_max = bootstrap_config[APPLICATION_BOOTCNT_MAX];
 
     kprintf("BOOTROM: [app_cnt=%d, boot_cnt=%d] ", app_cnt, boot_cnt);

@@ -9,6 +9,8 @@
 
 #define MAX_BUF 1024
 
+#define WORD_SIZE 4
+
 // The reset control register allows us to signal a CPU reset
 #define RESET_CTRL_BASE         0x60040000
 
@@ -17,20 +19,22 @@
 #define BOOTSTRAP_BASE          0x60050000
 
 // Bootstrap configuration bytes received from the host: each configuration
-// parameter contains an unsigned integer of 4 bytes.
+// parameter contains an unsigned integer of 4 bytes. The first 8 bytes are
+// managed by the bootrom.
 #define BOOTSTRAP_CONF_OFFSET   0x0000fc00
 #define BOOTSTRAP_CONF_ADDR     (BOOTSTRAP_BASE + BOOTSTRAP_CONF_OFFSET)
 #define BOOTSTRAP_CONF_BYTECNT  32
 #define BOOTSTRAP_CONF_PARAMCNT 8
+#define BOOTSTRAP_CONF_STARTIDX 2    // smaller indices are managed by bootrom
 // Indices of the configuration parameters, using integer pointer arithmetic
-#define APPLICATION_CNT         0    // offset 0x0000fc00
-#define APPLICATION_CNT_MAX     1    // offset 0x0000fc04
-#define APPLICATION_BOOTCNT     2    // offset 0x0000fc08
-#define APPLICATION_BOOTCNT_MAX 3    // offset 0x0000fc0c
-#define APPLICATION_ELF_SIZE    4    // offset 0x0000fc10
-#define INPUT_ARRAY_START       5    // offset 0x0000fc14
-#define INPUT_ARRAY_END         6    // offset 0x0000fc18
-#define INPUT_ARRAY_SIZE        7    // offset 0x0000fc1c
+#define APPLICATION_CNT         0    // offset 0x0000fc00 - managed by bootrom
+#define APPLICATION_BOOTCNT     1    // offset 0x0000fc04 - managed by bootrom
+#define APPLICATION_CNT_MAX     2    // offset 0x0000fc08 - set by bootstrap
+#define APPLICATION_BOOTCNT_MAX 3    // offset 0x0000fc0c - set by bootstrap
+#define APPLICATION_ELF_SIZE    4    // offset 0x0000fc10 - set by bootstrap
+#define INPUT_ARRAY_START       5    // offset 0x0000fc14 - set by bootstrap
+#define INPUT_ARRAY_END         6    // offset 0x0000fc18 - set by bootstrap
+#define INPUT_ARRAY_SIZE        7    // offset 0x0000fc1c - set by bootstrap
 
 // The benchmark application mmio region
 #define APPLICATION_BASE        0x60080000

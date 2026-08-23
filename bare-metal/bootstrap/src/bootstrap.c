@@ -44,7 +44,9 @@ int main(void)
   // Configuration bytes
   // The write function on the host will send the most significant byte first,
   // since it runs a little endian system.
-  int cnt = 0;
+
+  // cnt starts where bootstrap manages the bootstrap config
+  int cnt = BOOTSTRAP_CONF_STARTIDX * WORD_SIZE;
   char c = 0;
   while (cnt < BOOTSTRAP_CONF_BYTECNT) {
     if (kdata_ready()) {
@@ -56,17 +58,19 @@ int main(void)
   // Write the received bytes to the MMIO memory
   volatile uint32_t *bootstrap_cfg_mmio = (uint32_t *) BOOTSTRAP_CONF_ADDR;
   memcpy(word_buffer, buffer, BOOTSTRAP_CONF_BYTECNT);
-  for (int i=0; i<BOOTSTRAP_CONF_PARAMCNT; i++) {
+  for (int i=BOOTSTRAP_CONF_STARTIDX; i<BOOTSTRAP_CONF_PARAMCNT; i++) {
     bootstrap_cfg_mmio[i] = word_buffer[i];
   }
 
-  // Print the received parameters to stdout
+  // Print the parameters managed by bootrom to stdout
   kprintf("BOOTSTRAP: application counter = 0x");
   print_hex(bootstrap_cfg_mmio[APPLICATION_CNT], 8);
-  kprintf("\nBOOTSTRAP: application counter max = 0x");
-  print_hex(bootstrap_cfg_mmio[APPLICATION_CNT_MAX], 8);
   kprintf("\nBOOTSTRAP: application boot counter = 0x");
   print_hex(bootstrap_cfg_mmio[APPLICATION_BOOTCNT], 8);
+
+  // Print the received parameters to stdout
+  kprintf("\nBOOTSTRAP: application counter max = 0x");
+  print_hex(bootstrap_cfg_mmio[APPLICATION_CNT_MAX], 8);
   kprintf("\nBOOTSTRAP: application boot counter max = 0x");
   print_hex(bootstrap_cfg_mmio[APPLICATION_BOOTCNT_MAX], 8);
   kprintf("\nBOOTSTRAP: application elf size = 0x");
