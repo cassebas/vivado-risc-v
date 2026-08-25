@@ -134,8 +134,8 @@ architecture structural of boot_device_datafiller is
   --   integer(ceil(real(BRAM_SIZE)/real(ARRAY_SIZE_DEF))) - 1;
 
   signal reset_count  : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (others => '0');
-  signal reset_active : std_logic;
-  signal logic_rst_n  : std_logic := '1';
+  signal reset_active : std_logic := '0';
+  signal logic_rst_n  : std_logic := '0';
 
   signal logic_set    : std_logic := '0';
 
@@ -155,11 +155,13 @@ begin
   logic_reset_ctrl : process(clk) is
   begin
     if rising_edge(clk) then
+      logic_rst_n <= '1';
 
+      -- Logic_set event from the reset control component?
+      --   (logic_set_ev_i is active *high*)
       if logic_set_ev_i = '1' then
+        -- Issue reset for datarcv component
         logic_rst_n <= '0';
-      else
-        logic_rst_n <= '1';
       end if;
 
       -- Reset from the reset control component? (cpu_reset_n is active *low*)
@@ -169,9 +171,16 @@ begin
             -- Only set/reset logic_set upon a *new* reset event
             if reset_count < ARRAYS_PER_BLOCK then
               reset_count <= reset_count + 1;
+
+              if reset_count = 0 then
+                -- Very first reset, give the datarcv component a signal
+                -- to start sending the command to host
+                logic_rst_n <= '0';
+              end if;
             else
+              -- reset_count == ARRAYS_PER_BLOCK, reset to one
+              reset_count <= (0 => '1', others => '0');
               logic_rst_n <= '0';
-              reset_count <= (others => '0');
             end if;
             reset_active <= '1';
           end if;

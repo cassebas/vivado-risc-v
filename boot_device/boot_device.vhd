@@ -531,7 +531,9 @@ begin
                      input_data2_read;
 
 
-  inputdata_bram_muxes : process (inputdata_mux_ctrl) is
+  inputdata_bram_muxes : process (inputdata_mux_ctrl,
+                                  read_wea, read_addr, read_data,
+                                  write_wea, write_addr, write_data) is
   begin
     if inputdata_mux_ctrl = '0' then
       input_wea1  <= read_wea;

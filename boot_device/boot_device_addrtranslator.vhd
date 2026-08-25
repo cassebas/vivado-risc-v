@@ -80,17 +80,19 @@ begin
   compute_offset : process (clk) is
   begin
     if rising_edge(clk) then
-      if logic_set_ev_i = '1' then
-        reset_cnt <= (others => '0');
-        inputdata_mux_ctrl <= not inputdata_mux_ctrl;
-      elsif cpu_reset_n = '0' then
+      if cpu_reset_n = '0' then
         -- Only increase offset upon a *new* reset event
-        if reset_active = '0' then
-          if logic_set = '1' then
+        if logic_set = '1' then
+          if reset_active = '0' then
             if reset_cnt < ARRAYS_PER_BLOCK then
               reset_cnt <= reset_cnt + 1;
-              if reset_cnt > 0 then
-                -- At the very first reset the offset should not be incremented
+
+              if reset_cnt = 0 then
+                -- Very first reset, switch inputdata_mux_ctrl to get the first
+                -- uploaded input data
+                inputdata_mux_ctrl <= '1';
+                input_addr_offset <= (others => '0');
+              else
                 input_addr_offset <= input_addr_offset_nxt;
               end if;
             else
@@ -99,8 +101,8 @@ begin
               input_addr_offset <= (others => '0');
               inputdata_mux_ctrl <= not inputdata_mux_ctrl;
             end if;
+            reset_active <= '1';
           end if;
-          reset_active <= '1';
         end if;
       else
         reset_active <= '0';

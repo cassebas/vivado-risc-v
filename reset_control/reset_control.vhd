@@ -49,12 +49,12 @@ architecture behavioral of reset_control is
   constant RST_CLK_INHIBIT : natural := 20 - RST_CLK_PERIODS;
 
   -- Number of clock periods the logic set signal is asserted
-  constant LOGIC_SET_CLK_PERIODS : natural := 2;
+  constant LOGIC_SET_CLK_PERIODS : natural := 1;
   -- Number of clock periods the logic set signal is to be inhibited
   constant LOGIC_SET_CLK_INHIBIT : natural := 10 - LOGIC_SET_CLK_PERIODS;
 
   -- Number of clock periods the logic rst signal is asserted
-  constant LOGIC_RST_CLK_PERIODS : natural := 2;
+  constant LOGIC_RST_CLK_PERIODS : natural := 1;
   -- Number of clock periods the logic rst signal is to be inhibited
   constant LOGIC_RST_CLK_INHIBIT : natural := 10 - LOGIC_RST_CLK_PERIODS;
 
