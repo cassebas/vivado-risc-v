@@ -224,6 +224,15 @@ static void sync_with_host(uint8_t sync_nr)
     if (!done) {
       // And reset checks for the next try
       checks = 0;
+
+      if (sync_nr == 1) {
+        // This is the first sync, here we might want to send the
+        // ACK again, because the host program might be late in this
+        // case.
+
+        // Send the synchronization request to the host
+        kputc(ASCII_ENQ);
+      }
     }
   }
 }
