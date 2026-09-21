@@ -23,41 +23,48 @@ architecture behavioral of reset_control is
   constant CMD_LOGIC_RESET : std_logic_vector(7 downto 0) := "11001100"; -- 0xCC
 
   signal cpu_reset_n_ff : std_logic := '1';
+  signal cpu_reset_n_ev : std_logic := '0';
 
   signal logic_set_ff : std_logic := '0';
-  signal logic_rst_ff : std_logic := '0';
+  signal logic_set_ev : std_logic := '0';
 
   signal logic_rst_ev : std_logic := '0';
-  signal logic_set_ev : std_logic := '0';
+  signal logic_rst_ff : std_logic := '0';
 
 begin
   reset_ctrl : process(clk) is
   begin
     if rising_edge(clk) then
-      if aresetn = '0' then
-        cpu_reset_n_ff <= '1';
-        logic_set_ff <= '0';
-        logic_rst_ff <= '0';
-        logic_set_ev <= '0';
-        logic_rst_ev <= '0';
-      else
-        if cmd = CMD_RESET then
+      if cmd = CMD_RESET then
+        if cpu_reset_n_ev /= '1' then
           cpu_reset_n_ff <= '0';
-        elsif cmd = CMD_LOGIC_SET then
-          if logic_set_ev /= '1' then
-            logic_set_ff <= '1';
-            logic_set_ev <= '1';
-          else
-            logic_set_ff <= '0';
-          end if;
-        elsif cmd = CMD_LOGIC_RESET then
-          if logic_rst_ev /= '1' then
-            logic_rst_ff <= '1';
-            logic_rst_ev <= '1';
-          else
-            logic_rst_ff <= '0';
-          end if;
+          cpu_reset_n_ev <= '1';
+        else
+          cpu_reset_n_ff <= '1';
         end if;
+      elsif cmd = CMD_LOGIC_SET then
+        if logic_set_ev /= '1' then
+          logic_set_ff <= '1';
+          logic_set_ev <= '1';
+        else
+          logic_set_ff <= '0';
+        end if;
+      elsif cmd = CMD_LOGIC_RESET then
+        if logic_rst_ev /= '1' then
+          logic_rst_ff <= '1';
+          logic_rst_ev <= '1';
+        else
+          logic_rst_ff <= '0';
+        end if;
+      else
+        cpu_reset_n_ff <= '1';
+        cpu_reset_n_ev <= '0';
+
+        logic_set_ff <= '0';
+        logic_set_ev <= '0';
+
+        logic_rst_ff <= '0';
+        logic_rst_ev <= '0';
       end if;
     end if;
   end process reset_ctrl;
