@@ -16,7 +16,6 @@ entity reset_control_v1_0 is
 	);
 	port (
 		-- Users to add ports here
-        led_out     : out std_logic_vector(7 downto 0);
         cpu_reset_n : out std_logic;
         logic_set   : out std_logic;
         logic_reset : out std_logic;
@@ -58,7 +57,6 @@ architecture arch_imp of reset_control_v1_0 is
 		C_S_AXI_ADDR_WIDTH	: integer	:= 4
 		);
 		port (
-        led_out     : out std_logic_vector(7 downto 0);
         cpu_reset_n : out std_logic;
         logic_set   : out std_logic;
         logic_reset : out std_logic;
@@ -97,7 +95,6 @@ reset_control_v1_0_S00_AXI_inst : reset_control_v1_0_S00_AXI
 	)
 	port map (
         -- User ports
-        led_out         => led_out,
         cpu_reset_n     => cpu_reset_n,
         logic_set       => logic_set,
         logic_reset     => logic_reset,

@@ -9,7 +9,6 @@ entity reset_control is
   port (clk         : in std_logic;
         aresetn     : in std_logic;
         cmd_in      : in std_logic_vector(31 downto 0);
-        led_out     : out std_logic_vector(7 downto 0);
         cpu_reset_n : out std_logic;
         logic_set   : out std_logic;
         logic_reset : out std_logic);
@@ -189,7 +188,5 @@ begin
       end if;
     end if;
   end process read_cmd;
-
-  led_out <= std_logic_vector(cmd);
 
 end Behavioral;

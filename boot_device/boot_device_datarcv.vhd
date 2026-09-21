@@ -21,7 +21,7 @@ entity boot_device_datarcv is
         logic_rst_n   : in std_logic;
 
         -- LEDs (debug)
-        led_out : out std_logic_vector(7 downto 0);
+        led_out : out std_logic_vector(6 downto 0);
 
         --
         -- AXI Lite master ports
@@ -587,17 +587,17 @@ begin
 
       case axi_lite_w_state is
         when AXI_IDLE =>
-          led_out(7 downto 2) <= (2 => '1', others => '0');
+          led_out(6 downto 2) <= (2 => '1', others => '0');
         when AXI_READ_REQ_STATUS =>
-          led_out(7 downto 2) <= (3 => '1', others => '0');
+          led_out(6 downto 2) <= (3 => '1', others => '0');
         when AXI_READ_DATA_STATUS =>
-          led_out(7 downto 2) <= (4 => '1', others => '0');
+          led_out(6 downto 2) <= (4 => '1', others => '0');
         when AXI_WRITE_REQ_DATA =>
-          led_out(7 downto 2) <= (5 => '1', others => '0');
+          led_out(6 downto 2) <= (5 => '1', others => '0');
         when AXI_WRITE_RESP =>
-          led_out(7 downto 2) <= (6 => '1', others => '0');
+          led_out(6 downto 2) <= (6 => '1', others => '0');
         when others =>
-          led_out(7 downto 2) <= (others => '0');
+          led_out(6 downto 2) <= (others => '0');
       end case;
     else
       led_out(0) <= '0';
@@ -610,17 +610,17 @@ begin
 
       case axi_lite_r_state is
         when AXI_IDLE =>
-          led_out(7 downto 2) <= (2 => '1', others => '0');
+          led_out(6 downto 2) <= (2 => '1', others => '0');
         when AXI_READ_REQ_STATUS =>
-          led_out(7 downto 2) <= (3 => '1', others => '0');
+          led_out(6 downto 2) <= (3 => '1', others => '0');
         when AXI_READ_REQ_BUFFER =>
-          led_out(7 downto 2) <= (4 => '1', others => '0');
+          led_out(6 downto 2) <= (4 => '1', others => '0');
         when AXI_READ_DATA_STATUS =>
-          led_out(7 downto 2) <= (5 => '1', others => '0');
+          led_out(6 downto 2) <= (5 => '1', others => '0');
         when AXI_READ_DATA_BUFFER =>
-          led_out(7 downto 2) <= (6 => '1', others => '0');
+          led_out(6 downto 2) <= (6 => '1', others => '0');
         when others =>
-          led_out(7 downto 2) <= (others => '0');
+          led_out(6 downto 2) <= (others => '0');
       end case;
     end if;
 

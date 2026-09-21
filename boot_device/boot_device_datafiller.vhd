@@ -80,7 +80,7 @@ architecture structural of boot_device_datafiller is
           logic_rst_n   : in std_logic;
 
           -- LEDs (debug)
-          led_out       : out std_logic_vector(7 downto 0);
+          led_out       : out std_logic_vector(6 downto 0);
 
           --
           -- AXI Lite master ports
@@ -138,6 +138,9 @@ architecture structural of boot_device_datafiller is
   signal logic_rst_n  : std_logic := '0';
 
   signal logic_set    : std_logic := '0';
+
+  signal led_6_0 : std_logic_vector(6 downto 0);
+  signal led_7   : std_logic;
 
 begin
   set_reset_logic_set : process(clk) is
@@ -228,7 +231,7 @@ begin
     port map (clk           => clk,
               rst_n         => rst_n,
               logic_rst_n   => logic_rst_n,
-              led_out       => led_out,
+              led_out       => led_6_0,
               M_AXI_awaddr  => axi_awaddr,
               M_AXI_awvalid => axi_awvalid,
               M_AXI_awready => axi_awready,
@@ -248,5 +251,22 @@ begin
               fill_wea_o    => fill_wea_o,
               fill_addr_o   => fill_addr_o,
               fill_data_o   => fill_data_o);
+
+  led_7_switch : process(clk) is
+  begin
+    if rising_edge(clk) then
+      if rst_n = '0' then
+        led_7 <= '0';
+      else
+        if logic_set_ev_i = '1' then
+          led_7 <= '1';
+        elsif logic_rst_ev_i = '1' then
+          led_7 <= '0';
+        end if;
+      end if;
+    end if;
+  end process led_7_switch;
+
+  led_out <= led_7 & led_6_0;
 
 end architecture;
