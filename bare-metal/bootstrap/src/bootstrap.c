@@ -63,18 +63,20 @@ int main(void)
   }
 
   // Print the parameters managed by bootrom to stdout
-  kprintf("BOOTSTRAP: application counter = 0x");
-  print_hex(bootstrap_cfg_mmio[APPLICATION_CNT], 8);
-  kprintf("\nBOOTSTRAP: application boot counter = 0x");
+  kprintf("BOOTSTRAP: application boot counter = 0x");
   print_hex(bootstrap_cfg_mmio[APPLICATION_BOOTCNT], 8);
 
   // Print the received parameters to stdout
-  kprintf("\nBOOTSTRAP: application counter max = 0x");
-  print_hex(bootstrap_cfg_mmio[APPLICATION_CNT_MAX], 8);
   kprintf("\nBOOTSTRAP: application boot counter max = 0x");
   print_hex(bootstrap_cfg_mmio[APPLICATION_BOOTCNT_MAX], 8);
   kprintf("\nBOOTSTRAP: application elf size = 0x");
   print_hex(bootstrap_cfg_mmio[APPLICATION_ELF_SIZE], 8);
+
+  kprintf("\nBOOTSTRAP: experiment number = 0x");
+  print_hex(bootstrap_cfg_mmio[EXPERIMENT_NR], 8);
+  kprintf("\nBOOTSTRAP: experiment number max = 0x");
+  print_hex(bootstrap_cfg_mmio[EXPERIMENT_NR_MAX], 8);
+
   kprintf("\nBOOTSTRAP: input array start = 0x");
   print_hex(bootstrap_cfg_mmio[INPUT_ARRAY_START], 8);
   kprintf("\nBOOTSTRAP: input array end = 0x");

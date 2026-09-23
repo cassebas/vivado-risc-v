@@ -25,13 +25,13 @@
 #define BOOTSTRAP_CONF_ADDR     (BOOTSTRAP_BASE + BOOTSTRAP_CONF_OFFSET)
 #define BOOTSTRAP_CONF_BYTECNT  32
 #define BOOTSTRAP_CONF_PARAMCNT 8
-#define BOOTSTRAP_CONF_STARTIDX 2    // smaller indices are managed by bootrom
+#define BOOTSTRAP_CONF_STARTIDX 1    // smaller indices are managed by bootrom
 // Indices of the configuration parameters, using integer pointer arithmetic
-#define APPLICATION_CNT         0    // offset 0x0000fc00 - managed by bootrom
-#define APPLICATION_BOOTCNT     1    // offset 0x0000fc04 - managed by bootrom
-#define APPLICATION_CNT_MAX     2    // offset 0x0000fc08 - set by bootstrap
-#define APPLICATION_BOOTCNT_MAX 3    // offset 0x0000fc0c - set by bootstrap
-#define APPLICATION_ELF_SIZE    4    // offset 0x0000fc10 - set by bootstrap
+#define APPLICATION_BOOTCNT     0    // offset 0x0000fc00 - managed by bootrom
+#define APPLICATION_BOOTCNT_MAX 1    // offset 0x0000fc04 - set by bootstrap
+#define APPLICATION_ELF_SIZE    2    // offset 0x0000fc08 - set by bootstrap
+#define EXPERIMENT_NR           3    // offset 0x0000fc0c - set by bootstrap
+#define EXPERIMENT_NR_MAX       4    // offset 0x0000fc10 - set by bootstrap
 #define INPUT_ARRAY_START       5    // offset 0x0000fc14 - set by bootstrap
 #define INPUT_ARRAY_END         6    // offset 0x0000fc18 - set by bootstrap
 #define INPUT_ARRAY_SIZE        7    // offset 0x0000fc1c - set by bootstrap

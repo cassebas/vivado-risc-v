@@ -130,12 +130,9 @@ architecture structural of boot_device_datafiller is
   signal axi_rvalid  : std_logic;
   signal axi_rready  : std_logic;
 
-  -- constant MAX_BLOCKS : integer :=
-  --   integer(ceil(real(BRAM_SIZE)/real(ARRAY_SIZE_DEF))) - 1;
-
   signal reset_count  : unsigned(BRAM_ADDR_WIDTH-1 downto 0) := (others => '0');
   signal reset_active : std_logic := '0';
-  signal logic_rst_n  : std_logic := '0';
+  signal logic_rst_n  : std_logic := '1';
 
   signal logic_set    : std_logic := '0';
 
@@ -252,21 +249,7 @@ begin
               fill_addr_o   => fill_addr_o,
               fill_data_o   => fill_data_o);
 
-  led_7_switch : process(clk) is
-  begin
-    if rising_edge(clk) then
-      if rst_n = '0' then
-        led_7 <= '0';
-      else
-        if logic_set_ev_i = '1' then
-          led_7 <= '1';
-        elsif logic_rst_ev_i = '1' then
-          led_7 <= '0';
-        end if;
-      end if;
-    end if;
-  end process led_7_switch;
-
-  led_out <= led_7 & led_6_0;
+  -- Debug LEDs, led_6_0 come from the datarcv component (AXI state machine)
+  led_out <= logic_set & led_6_0;
 
 end architecture;

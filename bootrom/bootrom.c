@@ -605,21 +605,21 @@ int main(void) {
     uint32_t *application_base = (uint32_t *) APPLICATION_BASE;
 
     uint32_t *bootstrap_config = (uint32_t *) BOOTSTRAP_CONF_ADDR;
-    volatile uint32_t app_cnt = bootstrap_config[APPLICATION_CNT];
     volatile uint32_t boot_cnt = bootstrap_config[APPLICATION_BOOTCNT];
+    volatile uint32_t boot_cnt_max = bootstrap_config[APPLICATION_BOOTCNT_MAX];
 
-    volatile uint32_t app_max = bootstrap_config[APPLICATION_CNT_MAX];
-    volatile uint32_t boot_max = bootstrap_config[APPLICATION_BOOTCNT_MAX];
+    volatile uint32_t exp_nr = bootstrap_config[EXPERIMENT_NR];
+    volatile uint32_t exp_nr_max = bootstrap_config[EXPERIMENT_NR_MAX];
 
-    kprintf("BOOTROM: [app_cnt=%d, boot_cnt=%d] ", app_cnt, boot_cnt);
+    kprintf("BOOTROM: [exp_nr=%d, boot_cnt=%d] ", exp_nr, boot_cnt);
     if (!boot_cnt) {
-      // First time boot!
-      kprintf("FIRST BOOT - running bootstrap application\n");
+      if (!exp_nr) {
+        // First time boot!
+        kprintf("FIRST BOOT - running bootstrap application\n");
 
-      // Set the start address of the application to bootstrap
-      set_blockram_address(bootstrap_base);
-    } else if (boot_cnt > boot_max) {
-      if (app_cnt < app_max) {
+        // Set the start address of the application to bootstrap
+        set_blockram_address(bootstrap_base);
+      } else if (exp_nr < exp_nr_max) {
         kprintf("Maximum number of boots reached. Running bootstrap again.\n");
         // Set the start address of the application to bootstrap
         set_blockram_address(bootstrap_base);
@@ -636,45 +636,44 @@ int main(void) {
     }
 
     for (;;) {
-        drv_status = STA_NOINIT;
-        errno = br_mount(&fatfs, "", 1);
-        if (errno) {
-            kprintf("Cannot mount SD: %s\n", errno_to_str());
-        }
-        else {
-            if (download() != 0) {
-                kprintf("Cannot read BOOT.ELF: %s\n", errno_to_str());
-            } else {
-              // Done running either bootstrap or application
+      drv_status = STA_NOINIT;
+      errno = br_mount(&fatfs, "", 1);
+      if (errno) {
+        kprintf("Cannot mount SD: %s\n", errno_to_str());
+      } else {
+        if (download() != 0) {
+          kprintf("Cannot read BOOT.ELF: %s\n", errno_to_str());
+        } else {
+          // Done running either bootstrap or application
 
-              // Restore boot_cnt/boot_max, they may have been overwritten
-              // because of the jump to another memory segment
-              boot_cnt = bootstrap_config[APPLICATION_BOOTCNT];
-              boot_max = bootstrap_config[APPLICATION_BOOTCNT_MAX];
+          // Restore boot_cnt/boot_cnt_max, they may have been overwritten
+          // because of the jump to another memory segment
+          boot_cnt = bootstrap_config[APPLICATION_BOOTCNT];
+          boot_cnt_max = bootstrap_config[APPLICATION_BOOTCNT_MAX];
 
-              if (boot_cnt == 0 || boot_cnt > boot_max) {
-                bootstrap_config[APPLICATION_CNT]++;
-                bootstrap_config[APPLICATION_BOOTCNT]++;
-                // Issue a logic set
-                kprintf("BOOTROM: issuing logic set.\n");
-                logic_set();
-              } else {
-                // Increase boot number by 1, for the next boot
-                bootstrap_config[APPLICATION_BOOTCNT]++;
-                if (boot_cnt > boot_max) {
-                  // Issue a logic reset
-                  kprintf("BOOTROM: issuing logic reset.\n");
-                  logic_reset();
-                }
-              }
-
-              // The application has returned from its main function
-              kprintf("BOOTROM: resetting the CPU.\n");
-
-              // And reset
-              reset_cpu();
+          if (boot_cnt < boot_cnt_max) {
+            if (boot_cnt == 0) {
+              // This is the first boot, we've returned from bootstrap
+              kprintf("BOOTROM: issuing logic set.\n");
+              logic_set();
             }
+            bootstrap_config[APPLICATION_BOOTCNT]++;
+          } else if (boot_cnt == boot_cnt_max) {
+            // This was the final boot of this experiment
+            bootstrap_config[APPLICATION_BOOTCNT] = 0;
+            kprintf("BOOTROM: issuing logic reset.\n");
+            logic_reset();
+          } else {
+            // Should not happen!
+            kprintf("BOOTROM: unexpected boot counter: %d\n", boot_cnt);
+          }
+
+          // The application has returned from its main function
+          kprintf("BOOTROM: resetting the CPU.\n");
+          // And reset
+          reset_cpu();
         }
+      }
     }
 
     return 0;
