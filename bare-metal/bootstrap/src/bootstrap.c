@@ -7,6 +7,7 @@
 #include "bootstrap.h"
 
 
+static void sleep_us(unsigned us);
 static void sleep_ms(unsigned ms);
 static void sync_with_host(uint8_t sync_nr);
 
@@ -182,20 +183,28 @@ uint32_t get_word(uint8_t *buffer)
   return word;
 }
 
-static void sleep_ms(unsigned ms)
+static void sleep_us(unsigned us)
 {
   uintptr_t cycles0, cycles1;
+
   asm volatile ("csrr %0, 0xB00" : "=r" (cycles0));
   for (;;) {
     asm volatile ("csrr %0, 0xB00" : "=r" (cycles1));
-    if (cycles1 - cycles0 >= ms * 100000) break;
+    if (cycles1 - cycles0 >= us * 100) {
+      break;
+    }
   }
+}
+
+static void sleep_ms(unsigned ms)
+{
+  sleep_us(ms * 1000);
 }
 
 static void sync_with_host(uint8_t sync_nr)
 {
   const int TIMEOUT = 100;
-  int checks= 0;
+  int checks = 0;
   char c;
   bool done = false;
 
@@ -209,7 +218,6 @@ static void sync_with_host(uint8_t sync_nr)
     // Now try to receive the ACK
     while (!done && checks++ < TIMEOUT) {
       if (kdata_ready()) {
-
         // The ACK actually is a sequence of specific bytes, defined
         // by magic_token. This will ensure that the `ACK' won't be
         // accidentally sent in the data.

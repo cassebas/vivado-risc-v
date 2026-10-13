@@ -616,11 +616,17 @@ int main(void) {
       if (!exp_nr) {
         // First time boot!
         kprintf("FIRST BOOT - running bootstrap application\n");
+        // Wait for 2.5 seconds, to give the PC time to get ready for the ENQ char
+        usleep(2500000);
 
         // Set the start address of the application to bootstrap
         set_blockram_address(bootstrap_base);
       } else if (exp_nr < exp_nr_max) {
         kprintf("Maximum number of boots reached. Running bootstrap again.\n");
+
+        // Wait for 2.5 seconds, to give the PC time to get ready for the ENQ char
+        usleep(2500000);
+
         // Set the start address of the application to bootstrap
         set_blockram_address(bootstrap_base);
       } else {
